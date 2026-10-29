@@ -30,6 +30,10 @@ pnpm-debug.log*
 coverage
 .nyc_output
 
+# Local file storage
+uploads/
+**/uploads/
+
 # OS & Editor
 .DS_Store
 *.pem

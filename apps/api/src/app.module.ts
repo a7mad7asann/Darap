@@ -11,6 +11,7 @@ import { LessonsModule } from './modules/lessons/lessons.module';
 import { JoinCodesModule } from './modules/join-codes/join-codes.module';
 import { FilesModule } from './modules/files/files.module';
 import { LearningModule } from './modules/learning/learning.module';
+import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { AdminModule } from './modules/admin/admin.module';
     JoinCodesModule,
     FilesModule,
     LearningModule,
+    AssignmentsModule,
     AdminModule,
   ],
 })

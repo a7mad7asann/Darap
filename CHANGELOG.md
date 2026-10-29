@@ -4,6 +4,59 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-10-29 — Phase 4 — P4-001 through P4-004: Assignments & Manual Grading
+
+### Summary
+- Implemented Phase 4: Assignments & Manual Grading on top of the DARB MVP monorepo.
+- Integrated `Assignment`, `AssignmentSubmission`, `SubmissionAttachment`, and `GradeRecord` with PostgreSQL Row-Level Security (`assignment_tenant_isolation`, `submission_tenant_isolation`, `submissionattachment_tenant_isolation`, `graderecord_tenant_isolation`).
+- Added new audit actions: `ASSIGNMENT_CREATED`, `ASSIGNMENT_UPDATED`, `ASSIGNMENT_PUBLISHED`, `ASSIGNMENT_CLOSED`, `SUBMISSION_CREATED`, `SUBMISSION_GRADED` with migration `20261029123000_add_assignment_audit_actions`.
+- Created comprehensive shared contracts in `packages/contracts/src/assignment.ts` for assignments, submissions, file attachments, and grading.
+- Implemented Teacher Assignment Management:
+  - Create assignment with title, description, max score (validated > 0), and optional due date.
+  - Life-cycle management: save as `DRAFT`, `PUBLISHED`, and `CLOSED`.
+  - Edit draft and published assignments; closed assignments are immutable.
+  - View assignment submissions with student name, username, submission status, submitted text, and attachments.
+  - Soft-delete assignments (`deletedAt`).
+- Implemented Student Assignment Submissions:
+  - List published and closed assignments for enrolled courses with deadlines and max scores.
+  - Private S3-compatible attachment upload pipeline (`presignSubmissionFileUpload` & `completeSubmissionFileUpload`) validating MIME types, 25MB limit, and key partitioning `tenants/${tenantId}/assignments/${assignmentId}/students/${studentId}/`.
+  - Server-enforced unique constraint on `(assignmentId, studentId)` preventing duplicate submissions.
+  - Server-side deadline evaluation: submissions created after `dueDate` are automatically marked `status = LATE`.
+  - Grade release policy: student score and feedback are strictly masked (`null`) until the submission status is `GRADED`.
+- Implemented Teacher Grading & Feedback Engine:
+  - Teacher reviews text answers and downloads student attachments via presigned URL with access controls.
+  - Validation: score bounds `0 <= score <= maxScore`.
+  - Teacher records score and written feedback; submission status transitions to `GRADED` with `graderId` and timestamp recorded.
+  - Atomic upsert into `GradeRecord` (`itemType = 'ASSIGNMENT'`) ensuring synchronized course grades without duplicates.
+- Strict Security & Access Controls:
+  - Cross-tenant isolation: Teacher Layla cannot access or modify Teacher Ahmed's assignments.
+  - Unauthorized teacher cannot grade submissions.
+  - Cross-student file download forbidden: Student Sara cannot download Student Tariq's submission attachments.
+- Built Arabic RTL Frontend:
+  - Added "الواجبات والتكليفات" tab to Teacher Course Detail page (`TeacherAssignmentsTab`) with create/edit modal and submissions review/grading drawer.
+  - Added assignments tab to Student Course Learning page (`StudentAssignmentsView`) with submission form, file attachment uploader, submission status, and grade card.
+- Comprehensive Automated Tests:
+  - Created `apps/api/test/phase4-assignments-and-grading.e2e-spec.ts` with 22 tests covering assignment lifecycle, RLS isolation, duplicate prevention, late status detection, grading bounds, atomic `GradeRecord` upsert, and attachment download permissions.
+  - 100% test pass rate across monorepo: 77/77 E2E tests, 19/19 unit tests, 0 lint warnings, clean builds.
+
+### Files Changed
+- `apps/api/prisma/schema.prisma` — Added new `AuditAction` enum values for assignments and submissions.
+- `apps/api/prisma/migrations/20261029123000_add_assignment_audit_actions/migration.sql` — Applied database migration.
+- `packages/contracts/src/assignment.ts`, `enums.ts`, `index.ts` — Defined assignment DTOs and audit actions.
+- `apps/api/src/modules/files/files.service.ts` — Added `presignSubmissionFileUpload`, `completeSubmissionFileUpload`, and `presignSubmissionAttachmentDownload`.
+- `apps/api/src/modules/assignments/*` — Created `AssignmentsModule`, `AssignmentsService`, `TeacherAssignmentsController`, `StudentAssignmentsController`, and DTOs.
+- `apps/api/src/app.module.ts` — Registered `AssignmentsModule`.
+- `apps/web/src/lib/api-client.ts` — Added client methods for teacher assignments, student submissions, file presigning, and grading.
+- `apps/web/src/components/teacher/teacher-assignments-tab.tsx` — Teacher assignment management & grading drawer.
+- `apps/web/src/components/student/student-assignments-view.tsx` — Student assignment view, file uploader, and grades card.
+- `apps/web/src/app/(teacher)/teacher/courses/[courseId]/page.tsx` — Integrated assignments tab for teachers.
+- `apps/web/src/app/(student)/student/courses/[courseId]/page.tsx` — Integrated assignments tab for students.
+- `apps/api/test/phase4-assignments-and-grading.e2e-spec.ts` — 22-test automated E2E test suite for Phase 4.
+- `docs/phases/PHASE_4_ASSIGNMENTS_AND_GRADING.md` — Completed Phase 4 documentation.
+- `TASKS.md`, `PROJECT_MEMORY.md`, `CHANGELOG.md` — Updated project memory and task registry.
+
+---
+
 ## 2026-10-29 — Phase 3 — P3-001 through P3-011: Course Expansion, Worksheets & Rich Content
 
 ### Summary

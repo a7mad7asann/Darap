@@ -32,6 +32,14 @@ import {
   AdminResetPasswordDto,
   AdminUsersListDto,
   EnrolledStudentSummaryDto,
+  CreateAssignmentDto,
+  UpdateAssignmentDto,
+  AssignmentSummaryDto,
+  AssignmentDetailDto,
+  SubmitAssignmentDto,
+  GradeSubmissionDto,
+  StudentSubmissionDto,
+  AssignmentSubmissionSummaryDto,
 } from '@darb/contracts';
 
 const API_BASE =
@@ -315,6 +323,146 @@ export const apiClient = {
 
   async presignStudentDownload(fileId: string): Promise<PresignDownloadResponseDto> {
     const res = await fetch(`${API_BASE}/student/files/${fileId}/presign-download`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<PresignDownloadResponseDto>(res);
+  },
+
+  // --- Assignments & Grading (Teacher) ---
+  async getTeacherAssignments(courseId: string): Promise<AssignmentSummaryDto[]> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/assignments`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AssignmentSummaryDto[]>(res);
+  },
+
+  async createAssignment(courseId: string, payload: CreateAssignmentDto): Promise<AssignmentSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/assignments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<AssignmentSummaryDto>(res);
+  },
+
+  async getTeacherAssignmentDetails(assignmentId: string): Promise<AssignmentDetailDto> {
+    const res = await fetch(`${API_BASE}/teacher/assignments/${assignmentId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AssignmentDetailDto>(res);
+  },
+
+  async updateAssignment(assignmentId: string, payload: UpdateAssignmentDto): Promise<AssignmentSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/assignments/${assignmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<AssignmentSummaryDto>(res);
+  },
+
+  async publishAssignment(assignmentId: string): Promise<{ id: string; status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/assignments/${assignmentId}/publish`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; status: string; message: string }>(res);
+  },
+
+  async closeAssignment(assignmentId: string): Promise<{ id: string; status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/assignments/${assignmentId}/close`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; status: string; message: string }>(res);
+  },
+
+  async deleteAssignment(assignmentId: string): Promise<{ id: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/assignments/${assignmentId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; message: string }>(res);
+  },
+
+  async gradeSubmission(submissionId: string, payload: GradeSubmissionDto): Promise<AssignmentSubmissionSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/submissions/${submissionId}/grade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<AssignmentSubmissionSummaryDto>(res);
+  },
+
+  async presignTeacherSubmissionDownload(fileId: string): Promise<PresignDownloadResponseDto> {
+    const res = await fetch(`${API_BASE}/teacher/submission-attachments/${fileId}/presign-download`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<PresignDownloadResponseDto>(res);
+  },
+
+  // --- Assignments & Submissions (Student) ---
+  async getStudentAssignments(courseId: string): Promise<AssignmentDetailDto[]> {
+    const res = await fetch(`${API_BASE}/student/courses/${courseId}/assignments`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AssignmentDetailDto[]>(res);
+  },
+
+  async getStudentAssignmentDetails(assignmentId: string): Promise<AssignmentDetailDto> {
+    const res = await fetch(`${API_BASE}/student/assignments/${assignmentId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AssignmentDetailDto>(res);
+  },
+
+  async submitAssignment(assignmentId: string, payload: SubmitAssignmentDto): Promise<AssignmentSubmissionSummaryDto> {
+    const res = await fetch(`${API_BASE}/student/assignments/${assignmentId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<AssignmentSubmissionSummaryDto>(res);
+  },
+
+  async presignSubmissionUpload(
+    assignmentId: string,
+    payload: PresignUploadRequestDto,
+  ): Promise<PresignUploadResponseDto> {
+    const res = await fetch(`${API_BASE}/student/assignments/${assignmentId}/files/presign-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<PresignUploadResponseDto>(res);
+  },
+
+  async completeSubmissionUpload(
+    assignmentId: string,
+    payload: CompleteUploadRequestDto,
+  ): Promise<{ id: string; originalName: string; mimeType: string; byteSize: number }> {
+    const res = await fetch(`${API_BASE}/student/assignments/${assignmentId}/files/complete-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ id: string; originalName: string; mimeType: string; byteSize: number }>(res);
+  },
+
+  async presignStudentSubmissionDownload(fileId: string): Promise<PresignDownloadResponseDto> {
+    const res = await fetch(`${API_BASE}/student/submission-attachments/${fileId}/presign-download`, {
       method: 'GET',
       credentials: 'include',
     });

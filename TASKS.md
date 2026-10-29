@@ -199,7 +199,32 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 4 — Assignments & Grading
-*(Deferred to Phase 4)*
+
+- [x] **P4-001 — Assignment Creation & Publishing**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-011
+  - **Acceptance**: Teachers create, edit, draft, publish, close, and soft-delete assignments with titles, instructions, positive max score, and optional due dates. Strict tenant isolation and ownership verified under RLS.
+  - **File Paths**: `apps/api/src/modules/assignments/*`, `packages/contracts/src/assignment.ts`, `apps/api/src/modules/assignments/teacher-assignments.controller.ts`
+
+- [x] **P4-002 — Student Submissions & Attachment Handling**
+  - **Status**: `TESTED`
+  - **Dependencies**: P4-001
+  - **Acceptance**: Enrolled students submit text and/or file attachments (max 25MB, MIME whitelist, storage key validation). Server-enforced unique constraint on `(assignmentId, studentId)` prevents duplicate submission. Server-side deadline check flags submissions past due date as `status = LATE`. Unenrolled students denied. Grade and feedback masked until graded.
+  - **File Paths**: `apps/api/src/modules/assignments/assignments.service.ts`, `apps/api/src/modules/assignments/student-assignments.controller.ts`, `apps/api/src/modules/files/files.service.ts`
+
+- [x] **P4-003 — Teacher Grading, Atomic GradeRecord & Security**
+  - **Status**: `TESTED`
+  - **Dependencies**: P4-002
+  - **Acceptance**: Teachers review submissions, record score (`0 <= score <= maxScore`), provide written feedback, save grader ID and timestamp; atomic upsert of `GradeRecord` (`itemType = 'ASSIGNMENT'`); grade release policy ensures students see grades only when status is `GRADED`. Cross-student attachment download forbidden.
+  - **File Paths**: `apps/api/src/modules/assignments/assignments.service.ts`, `apps/web/src/components/teacher/teacher-assignments-tab.tsx`, `apps/web/src/components/student/student-assignments-view.tsx`
+
+- [x] **P4-004 — Comprehensive Automated Security, Concurrency & Regression Tests**
+  - **Status**: `TESTED`
+  - **Dependencies**: P4-001 through P4-003
+  - **Acceptance**: 22 automated E2E tests validating assignment lifecycle, cross-tenant isolation, student duplicate submission rejection, late submission detection, score bounds validation, feedback saving, atomic `GradeRecord` sync, and cross-student file download authorization. All 77 system E2E tests passing.
+  - **File Paths**: `apps/api/test/phase4-assignments-and-grading.e2e-spec.ts`
+
+---
 
 ## Phase 5 — Multiple-Choice Exams & Automatic Grading
 *(Deferred to Phase 5)*

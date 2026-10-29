@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { EnrollmentStatus, CourseStatus, UserRole } from '@darb/contracts';
+import { EnrollmentStatus, CourseStatus, AssignmentStatus, UserRole } from '@darb/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { StorageProvider } from './storage.provider';
 import { PresignUploadNestDto } from './dto/presign-upload.dto';
@@ -286,6 +286,201 @@ export class FilesService {
 
       return {
         message: 'تمت إزالة الملف بنجاح',
+      };
+    });
+  }
+
+  async presignSubmissionFileUpload(
+    studentId: string,
+    assignmentId: string,
+    dto: PresignUploadNestDto,
+  ) {
+    // 1. Verify assignment exists, is published, and student is enrolled
+    const assignment = await this.prisma.withBypassRls(async (tx) => {
+      return tx.assignment.findFirst({
+        where: { id: assignmentId, deletedAt: null },
+        include: { course: true },
+      });
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('التكليف أو الواجب غير موجود');
+    }
+
+    if (assignment.status !== AssignmentStatus.PUBLISHED) {
+      throw new ForbiddenException('لا يمكن رفع مرفقات لواجب غير منشور للطلاب');
+    }
+
+    const enrollment = await this.prisma.withBypassRls(async (tx) => {
+      return tx.enrollment.findFirst({
+        where: {
+          studentId,
+          courseId: assignment.courseId,
+          status: EnrollmentStatus.ACTIVE,
+          deletedAt: null,
+        },
+      });
+    });
+
+    if (!enrollment) {
+      throw new ForbiddenException('أنت غير مسجل في المقرر الخاص بهذا الواجب');
+    }
+
+    const tenantId = assignment.tenantId;
+
+    // 2. Validate MIME type & file size
+    if (!ALLOWED_MIME_TYPES.has(dto.mimeType.toLowerCase())) {
+      throw new BadRequestException(
+        'نوع الملف غير مسموح به. يُسمح فقط بملفات PDF والمستندات والصور التعليمية.',
+      );
+    }
+
+    const ext = path.extname(dto.fileName).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      throw new BadRequestException('امتداد الملف غير صالح أو غير مصرح به');
+    }
+
+    if (dto.byteSize > MAX_FILE_SIZE) {
+      throw new BadRequestException('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت)');
+    }
+
+    // 3. Generate sanitized storage key
+    const safeName = this.sanitizeFileName(dto.fileName);
+    const storageKey = `tenants/${tenantId}/assignments/${assignmentId}/students/${studentId}/${uuidv4()}-${safeName}`;
+
+    // 4. Generate presigned upload URL
+    const result = await this.storage.generatePresignedUploadUrl(
+      storageKey,
+      dto.mimeType,
+      MAX_FILE_SIZE,
+    );
+
+    return {
+      uploadUrl: result.uploadUrl,
+      storageKey: result.storageKey,
+      uploadTicket: result.uploadTicket,
+      expiresInSeconds: result.expiresInSeconds,
+      maxBytes: MAX_FILE_SIZE,
+    };
+  }
+
+  async completeSubmissionFileUpload(
+    studentId: string,
+    assignmentId: string,
+    dto: CompleteUploadNestDto,
+  ) {
+    const assignment = await this.prisma.withBypassRls(async (tx) => {
+      return tx.assignment.findFirst({
+        where: { id: assignmentId, deletedAt: null },
+      });
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('التكليف أو الواجب غير موجود');
+    }
+
+    const tenantId = assignment.tenantId;
+    const expectedPrefix = `tenants/${tenantId}/assignments/${assignmentId}/students/${studentId}/`;
+    if (!dto.storageKey || !dto.storageKey.startsWith(expectedPrefix)) {
+      throw new BadRequestException('مسار تخزين الملف غير صالح أو لا يطابق سياق التكليف والطالب');
+    }
+
+    if (!ALLOWED_MIME_TYPES.has(dto.mimeType.toLowerCase())) {
+      throw new BadRequestException(
+        'نوع الملف غير مسموح به. يُسمح فقط بملفات PDF والمستندات والصور التعليمية.',
+      );
+    }
+
+    const ext = path.extname(dto.fileName).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      throw new BadRequestException('امتداد الملف غير صالح أو غير مصرح به');
+    }
+
+    if (dto.byteSize <= 0 || dto.byteSize > MAX_FILE_SIZE) {
+      throw new BadRequestException('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت)');
+    }
+
+    const exists = await this.storage.verifyObjectExists(dto.storageKey, dto.uploadTicket);
+    if (!exists) {
+      throw new BadRequestException(
+        'تعذر تأكيد رفع الملف: لم يتم العثور على الملف في التخزين السحابي',
+      );
+    }
+
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const fileObject = await tx.fileObject.create({
+        data: {
+          tenantId,
+          uploadedById: studentId,
+          originalName: this.sanitizeFileName(dto.fileName),
+          mimeType: dto.mimeType,
+          byteSize: BigInt(dto.byteSize),
+          storageKey: dto.storageKey,
+          isPublic: false,
+        },
+      });
+
+      return {
+        id: fileObject.id,
+        originalName: fileObject.originalName,
+        mimeType: fileObject.mimeType,
+        byteSize: Number(fileObject.byteSize),
+        createdAt: fileObject.createdAt.toISOString(),
+      };
+    });
+  }
+
+  async presignSubmissionAttachmentDownload(
+    userId: string,
+    userRole: UserRole,
+    fileObjectId: string,
+  ) {
+    return this.prisma.withBypassRls(async (tx) => {
+      const file = await tx.fileObject.findFirst({
+        where: { id: fileObjectId, deletedAt: null },
+        include: {
+          submissionAttachments: {
+            include: {
+              submission: {
+                include: {
+                  assignment: {
+                    include: { course: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!file || file.submissionAttachments.length === 0) {
+        throw new NotFoundException('الملف المطلوب غير موجود');
+      }
+
+      const submission = file.submissionAttachments[0].submission;
+      const course = submission.assignment.course;
+
+      // Access control:
+      // 1. If student: must be the submitting student
+      if (userRole === UserRole.STUDENT && submission.studentId !== userId) {
+        throw new ForbiddenException('غير مصرح لك بتحميل مرفقات تسليمات الطلاب الآخرين');
+      }
+
+      // 2. If teacher: must be the course teacher
+      if (userRole === UserRole.TEACHER && course.teacherId !== userId) {
+        throw new ForbiddenException('غير مصرح لك بتحميل تسليمات لمقررات معلم آخر');
+      }
+
+      const result = await this.storage.generatePresignedDownloadUrl(
+        file.storageKey,
+        file.originalName,
+      );
+
+      return {
+        downloadUrl: result.downloadUrl,
+        fileName: file.originalName,
+        mimeType: file.mimeType,
+        expiresInSeconds: result.expiresInSeconds,
       };
     });
   }

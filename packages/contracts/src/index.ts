@@ -6,4 +6,5 @@ export * from './lesson';
 export * from './join-code';
 export * from './file';
 export * from './section';
+export * from './assignment';
 export * from './admin';

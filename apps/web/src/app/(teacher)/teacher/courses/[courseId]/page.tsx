@@ -34,6 +34,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { MarkdownContent } from '@/components/ui/markdown-content';
+import { TeacherAssignmentsTab } from '@/components/teacher/teacher-assignments-tab';
 import { apiClient } from '@/lib/api-client';
 import {
   CourseDetailsDto,
@@ -52,7 +53,7 @@ export default function TeacherCourseDetailPage() {
   const [course, setCourse] = React.useState<CourseDetailsDto | null>(null);
   const [joinCodes, setJoinCodes] = React.useState<JoinCodeSummaryDto[]>([]);
   const [students, setStudents] = React.useState<EnrolledStudentSummaryDto[]>([]);
-  const [activeTab, setActiveTab] = React.useState<'lessons' | 'codes' | 'students'>('lessons');
+  const [activeTab, setActiveTab] = React.useState<'lessons' | 'codes' | 'students' | 'assignments'>('lessons');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -619,6 +620,17 @@ export default function TeacherCourseDetailPage() {
             <Users className="w-4 h-4" />
             الطلاب المسجلون ({students.length})
           </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'assignments'
+                ? 'border-emerald-600 text-emerald-600 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            الواجبات والتكليفات
+          </button>
         </div>
 
         {/* TAB 1: Sections & Lessons */}
@@ -1108,6 +1120,11 @@ export default function TeacherCourseDetailPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* TAB 4: Assignments & Grading */}
+        {activeTab === 'assignments' && (
+          <TeacherAssignmentsTab courseId={courseId} />
         )}
       </main>
     </div>

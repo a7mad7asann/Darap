@@ -25,6 +25,7 @@ import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { MarkdownContent } from '@/components/ui/markdown-content';
+import { StudentAssignmentsView } from '@/components/student/student-assignments-view';
 import { apiClient } from '@/lib/api-client';
 import { StudentLessonDto } from '@darb/contracts';
 
@@ -36,6 +37,7 @@ export default function StudentCourseLearningPage() {
   const [courseInfo, setCourseInfo] = React.useState<any>(null);
   const [lessons, setLessons] = React.useState<StudentLessonDto[]>([]);
   const [selectedLessonId, setSelectedLessonId] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<'lessons' | 'assignments'>('lessons');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [updatingProgress, setUpdatingProgress] = React.useState(false);
@@ -220,7 +222,35 @@ export default function StudentCourseLearningPage() {
           </div>
         </div>
 
-        {lessons.length === 0 ? (
+        {/* Course Tabs Navigation */}
+        <div className="flex border-b border-slate-200 gap-6 text-sm font-medium mb-6">
+          <button
+            onClick={() => setActiveTab('lessons')}
+            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'lessons'
+                ? 'border-blue-600 text-blue-600 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            الدروس والمحتوى التعليمي ({lessons.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'assignments'
+                ? 'border-blue-600 text-blue-600 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            الواجبات والتكليفات
+          </button>
+        </div>
+
+        {activeTab === 'assignments' ? (
+          <StudentAssignmentsView courseId={courseId} />
+        ) : lessons.length === 0 ? (
           <EmptyState
             title="لم يتم نشر دروس في هذا المقرر بعد"
             message="المعلم يعد الدروس وسيقوم بنشرها قريباً."
