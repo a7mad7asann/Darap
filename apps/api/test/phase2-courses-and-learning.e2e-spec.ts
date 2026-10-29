@@ -366,6 +366,61 @@ describe('DARB Phase 2: Courses, Join Codes, Learning & Admin E2E Tests', () => 
       expect(dbCode?.currentUses).toBe(1);
       expect(dbCode?.status).toBe('EXPIRED');
     });
+
+    describe('Enrolled Students Roster (GET /api/v1/teacher/courses/:courseId/students)', () => {
+      it('Teacher Ahmed views enrolled students for his course and sees enrolled students', async () => {
+        const res = await request(app.getHttpServer())
+          .get(`/api/v1/teacher/courses/${ahmedCourseId}/students`)
+          .set('Cookie', teacherAhmedCookie)
+          .expect(200);
+
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+
+        const sara = res.body.data.find((st: any) => st.username === 'student.sara');
+        expect(sara).toBeDefined();
+        expect(sara.displayName).toBe('سارة خالد');
+        expect(sara.enrolledAt).toBeDefined();
+      });
+
+      it('Unauthenticated request to course students is rejected with 401', async () => {
+        await request(app.getHttpServer())
+          .get(`/api/v1/teacher/courses/${ahmedCourseId}/students`)
+          .expect(401);
+      });
+
+      it('Student role requesting course students is rejected with 403', async () => {
+        await request(app.getHttpServer())
+          .get(`/api/v1/teacher/courses/${ahmedCourseId}/students`)
+          .set('Cookie', studentSaraCookie)
+          .expect(403);
+      });
+
+      it('Teacher Layla from different tenant cannot access Ahmed course students (404 RLS)', async () => {
+        await request(app.getHttpServer())
+          .get(`/api/v1/teacher/courses/${ahmedCourseId}/students`)
+          .set('Cookie', teacherLaylaCookie)
+          .expect(404);
+      });
+
+      it('Non-existent course UUID produces 404 with Arabic error message', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/teacher/courses/22222222-2222-2222-2222-222222222222/students')
+          .set('Cookie', teacherAhmedCookie)
+          .expect(404);
+
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toContain('المقرر الدراسي غير موجود');
+      });
+
+      it('Invalid course UUID format produces 400 Bad Request', async () => {
+        await request(app.getHttpServer())
+          .get('/api/v1/teacher/courses/invalid-uuid/students')
+          .set('Cookie', teacherAhmedCookie)
+          .expect(400);
+      });
+    });
   });
 
   describe('4. Student Learning & Progress Tracking', () => {

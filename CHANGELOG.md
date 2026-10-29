@@ -4,6 +4,29 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-10-29 — Pre-Phase-6 Audit, Bug Fixes & Sessions Verification
+
+### Summary
+- Completed comprehensive audit of course management workflows, session mechanisms, and authentication lifecycle.
+- **Course Management Bug Fix**:
+  - Investigated and resolved `Cannot GET /api/v1/teacher/courses/22222222-2222-2222-2222-222222222222/students`.
+  - Root cause: The frontend course details page (`apps/web/src/app/(teacher)/teacher/courses/[courseId]/page.tsx`) requested `apiClient.getCourseStudents(courseId)`, but the route handler `@Get(':courseId/students')` was missing from `TeacherCoursesController`.
+  - Fix: Added `@Get(':courseId/students')` route in `TeacherCoursesController` and implemented `getCourseStudents` in `CoursesService` with tenant RLS isolation, teacher ownership enforcement, UUID validation, and Arabic `404 Not Found` response for non-existent courses.
+  - Added companion course lesson reordering endpoints (`PUT` and `POST` `/api/v1/teacher/courses/:courseId/lessons/reorder`) in `TeacherCoursesController` and `lessons.service.ts`.
+  - Added 6 regression E2E tests in `phase2-courses-and-learning.e2e-spec.ts`.
+- **Sessions Forensic Audit**:
+  - Delineated "Authentication Sessions" (`darb_session` HTTP-only signed JWT cookie with 24h expiration, `AuthGuard`, `validateSessionToken`) from "Exam Sitting Sessions" (`ExamAttempt` entity tracking server-side `deadlineAt` and attempt progression).
+  - Verified that course/classroom live sessions (e.g. video conferencing / WebRTC) are not part of the MVP specification (explicitly out of scope per Phase 1 charter).
+  - Clarified architectural distinction between "Sections" (وحدات وفصول دراسية — fully implemented in Phase 3) and "Sessions".
+- **Verification Results**:
+  - All 103 E2E tests passing (6/6 test suites).
+  - All 19 unit tests passing (4/4 test suites).
+  - Total 122/122 automated tests passing.
+  - Monorepo linting and TypeScript checks pass with 0 warnings and 0 errors.
+  - Phase 6 confirmed as `NOT_STARTED` / ON HOLD.
+
+---
+
 ## 2026-10-29 — Phase 5 — P5-001 through P5-004: Multiple-Choice Exams & Automatic Grading
 
 ### Summary

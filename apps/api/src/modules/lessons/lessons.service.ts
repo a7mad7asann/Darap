@@ -267,6 +267,47 @@ export class LessonsService {
     });
   }
 
+  async reorderCourseLessons(
+    tenantId: string,
+    teacherId: string,
+    courseId: string,
+    dto: ReorderLessonsNestDto,
+    userRole: UserRole,
+  ) {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const course = await tx.course.findFirst({
+        where: { id: courseId, deletedAt: null },
+      });
+
+      if (!course) {
+        throw new NotFoundException('المقرر الدراسي غير موجود');
+      }
+
+      if (userRole !== UserRole.ADMIN && course.teacherId !== teacherId) {
+        throw new ForbiddenException('غير مصرح لك بإعادة ترتيب دروس هذا المقرر');
+      }
+
+      for (let i = 0; i < dto.lessonIds.length; i++) {
+        const id = dto.lessonIds[i];
+        await tx.lesson.updateMany({
+          where: { id, courseId },
+          data: { orderIndex: i },
+        });
+      }
+
+      const reordered = await tx.lesson.findMany({
+        where: { courseId, deletedAt: null },
+        orderBy: { orderIndex: 'asc' },
+      });
+
+      return reordered.map((l) => ({
+        id: l.id,
+        title: l.title,
+        orderIndex: l.orderIndex,
+      }));
+    });
+  }
+
   async deleteLesson(tenantId: string, teacherId: string, lessonId: string, userRole: UserRole) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const lesson = await tx.lesson.findFirst({

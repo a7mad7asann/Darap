@@ -8,10 +8,16 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { UserRole, UserSummaryDto, TenantMembershipDto } from '@darb/contracts';
+import {
+  UserRole,
+  UserSummaryDto,
+  TenantMembershipDto,
+  EnrolledStudentSummaryDto,
+} from '@darb/contracts';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -25,6 +31,7 @@ import { CreateCourseNestDto } from './dto/create-course.dto';
 import { UpdateCourseNestDto } from './dto/update-course.dto';
 import { CreateLessonNestDto } from '../lessons/dto/create-lesson.dto';
 import { CreateJoinCodeNestDto } from '../join-codes/dto/create-join-code.dto';
+import { ReorderLessonsNestDto } from '../lessons/dto/reorder-lesson.dto';
 
 @ApiTags('Teacher Courses')
 @ApiCookieAuth('darb_session')
@@ -66,6 +73,21 @@ export class TeacherCoursesController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
   ) {
     return this.coursesService.getTeacherCourseById(
+      activeTenant.tenantId,
+      user.id,
+      courseId,
+      user.role,
+    );
+  }
+
+  @Get(':courseId/students')
+  @ApiOperation({ summary: 'View enrolled students in this course' })
+  async getCourseStudents(
+    @CurrentUser() user: UserSummaryDto,
+    @CurrentTenant() activeTenant: TenantMembershipDto,
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+  ): Promise<EnrolledStudentSummaryDto[]> {
+    return this.coursesService.getCourseStudents(
       activeTenant.tenantId,
       user.id,
       courseId,
@@ -121,6 +143,25 @@ export class TeacherCoursesController {
     @Body() dto: CreateLessonNestDto,
   ) {
     return this.lessonsService.createLesson(
+      activeTenant.tenantId,
+      user.id,
+      courseId,
+      dto,
+      user.role,
+    );
+  }
+
+  @Put(':courseId/lessons/reorder')
+  @Post(':courseId/lessons/reorder')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reorder lessons within this course' })
+  async reorderCourseLessons(
+    @CurrentUser() user: UserSummaryDto,
+    @CurrentTenant() activeTenant: TenantMembershipDto,
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Body() dto: ReorderLessonsNestDto,
+  ) {
+    return this.lessonsService.reorderCourseLessons(
       activeTenant.tenantId,
       user.id,
       courseId,

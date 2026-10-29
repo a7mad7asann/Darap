@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CourseStatus, AuditAction, UserRole } from '@darb/contracts';
+import { CourseStatus, AuditAction, UserRole, EnrolledStudentSummaryDto } from '@darb/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { ContentSanitizer } from '../../common/utils/content-sanitizer';
 import { CreateCourseNestDto } from './dto/create-course.dto';
@@ -176,6 +176,59 @@ export class CoursesService {
           enrolledAt: e.enrolledAt.toISOString(),
         })),
       };
+    });
+  }
+
+  async getCourseStudents(
+    tenantId: string,
+    teacherId: string,
+    courseId: string,
+    userRole: UserRole,
+  ): Promise<EnrolledStudentSummaryDto[]> {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const course = await tx.course.findFirst({
+        where: {
+          id: courseId,
+          deletedAt: null,
+        },
+        include: {
+          enrollments: {
+            where: { deletedAt: null, status: 'ACTIVE' },
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                },
+              },
+              joinedViaCode: {
+                select: {
+                  codeHint: true,
+                },
+              },
+            },
+            orderBy: { enrolledAt: 'desc' },
+          },
+        },
+      });
+
+      if (!course) {
+        throw new NotFoundException('المقرر الدراسي غير موجود');
+      }
+
+      if (userRole !== UserRole.ADMIN && course.teacherId !== teacherId) {
+        throw new ForbiddenException('غير مصرح لك بالوصول إلى بيانات هذا المقرر');
+      }
+
+      return course.enrollments.map((e) => ({
+        studentId: e.student.id,
+        username: e.student.username,
+        displayName: e.student.displayName,
+        enrolledAt: e.enrolledAt.toISOString(),
+        enrollmentId: e.id,
+        joinedViaCodeHint: e.joinedViaCode?.codeHint || null,
+      }));
     });
   }
 

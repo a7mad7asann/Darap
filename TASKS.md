@@ -254,5 +254,21 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 
 ---
 
+## Pre-Phase-6 Audit, Bug Fixes & Sessions Verification
+
+- [x] **AUDIT-001 — Fix Course Management Enrolled Students Route & Regression Tests**
+  - **Status**: `TESTED`
+  - **Dependencies**: P5-004
+  - **Acceptance**: Implement `GET /api/v1/teacher/courses/:courseId/students` endpoint in `TeacherCoursesController` and `CoursesService`; enforce tenant isolation, teacher ownership, and 404/400 validation; add course lesson reordering endpoint (`PUT /api/v1/teacher/courses/:courseId/lessons/reorder`); add 6 regression E2E tests in `phase2-courses-and-learning.e2e-spec.ts`. All 103 system E2E tests passing.
+  - **File Paths**: `apps/api/src/modules/courses/teacher-courses.controller.ts`, `apps/api/src/modules/courses/courses.service.ts`, `apps/api/src/modules/lessons/lessons.service.ts`, `apps/api/test/phase2-courses-and-learning.e2e-spec.ts`
+
+- [x] **AUDIT-002 — Sessions Architecture & End-to-End Verification Audit**
+  - **Status**: `TESTED`
+  - **Dependencies**: None
+  - **Acceptance**: Complete forensic audit distinguishing authentication sessions (`darb_session` HTTP-only JWT cookies), student exam attempt sessions (`ExamAttempt`), and application/course sessions (out of MVP scope, non-existent in spec); verify cookie lifecycle, session expiry, token validation, and AuthGuard.
+  - **File Paths**: `apps/api/src/modules/auth/*`, `apps/api/src/common/guards/auth.guard.ts`, `docs/architecture/SECURITY_MODEL.md`
+
+---
+
 ## Phase 6 — Pilot Readiness & Production Hardening
-*(Deferred to Phase 6)*
+- **Status**: `NOT_STARTED` (ON HOLD — Stopped per explicit instruction; pending pilot readiness approval)
