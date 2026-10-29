@@ -155,3 +155,4 @@ This spins up PostgreSQL 16, creates the unprivileged `darb_app` role, and launc
 - [Entity Relationship Diagram (ERD)](docs/erd.md)
 - [Authentication & Multi-Tenant RLS Architecture](docs/architecture/auth-and-tenancy.md)
 - [Deployment & Managed Storage Strategy](docs/architecture/deployment-and-storage.md)
+# Darap
