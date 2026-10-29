@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, TenantStatus, MembershipStatus, EnrollmentStatus } from '@prisma/client';
+import { PrismaClient, UserRole, TenantStatus, MembershipStatus, EnrollmentStatus, CourseStatus } from '@prisma/client';
 import { hash, Algorithm } from '@node-rs/argon2';
 
 const prisma = new PrismaClient();
@@ -167,7 +167,9 @@ export async function seed() {
   // 6. Create Course in Tenant 1 (Physics)
   const course1 = await prisma.course.upsert({
     where: { id: '11111111-1111-1111-1111-111111111111' },
-    update: {},
+    update: {
+      status: CourseStatus.PUBLISHED,
+    },
     create: {
       id: '11111111-1111-1111-1111-111111111111',
       tenantId: tenant1.id,
@@ -175,6 +177,7 @@ export async function seed() {
       title: 'الفيزياء للثانوية العامة: الكهربية والمغناطيسية',
       description: 'كورس شامل يغطي منهج الفيزياء مع تدريبات واختبارات دورية',
       subject: 'فيزياء',
+      status: CourseStatus.PUBLISHED,
       isActive: true,
       enrollments: {
         create: {
@@ -189,7 +192,9 @@ export async function seed() {
   // 7. Create Course in Tenant 2 (Chemistry)
   const course2 = await prisma.course.upsert({
     where: { id: '22222222-2222-2222-2222-222222222222' },
-    update: {},
+    update: {
+      status: CourseStatus.PUBLISHED,
+    },
     create: {
       id: '22222222-2222-2222-2222-222222222222',
       tenantId: tenant2.id,
@@ -197,6 +202,7 @@ export async function seed() {
       title: 'الكيمياء العضوية المتقدمة',
       description: 'شرح مبسط لأسس الكيمياء العضوية والتفاعلات الكيميائية',
       subject: 'كيمياء',
+      status: CourseStatus.PUBLISHED,
       isActive: true,
       enrollments: {
         create: {

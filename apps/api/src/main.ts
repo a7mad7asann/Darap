@@ -56,6 +56,11 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('Health', 'Liveness and readiness health checks')
     .addTag('Auth', 'Authentication, session management, and current user profile')
+    .addTag('Teacher Courses', 'Teacher course management and student rosters')
+    .addTag('Teacher Lessons', 'Lesson creation, publishing, reordering, and file attachments')
+    .addTag('Teacher Join Codes', 'Cryptographic join-code generation and revocation')
+    .addTag('Student Learning', 'Student course enrollment, lesson viewing, and progress')
+    .addTag('Admin Provisioning', 'Administrator user provisioning and account management')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

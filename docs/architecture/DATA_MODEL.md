@@ -76,9 +76,10 @@ erDiagram
 
 ### 2.2 Courses & Enrollment
 - **`Course`**: Belongs to exactly one `Tenant` (`tenantId`). Taught by a teacher (`teacherId`).
+  - `status`: Enum `CourseStatus` (`DRAFT`, `PUBLISHED`, `ARCHIVED`). Only `PUBLISHED` courses are accessible to students.
 - **`JoinCode`**: Teacher-generated access token to enroll in a course.
   - `codeHash` is a unique SHA-256 hash. The plaintext code is never stored.
-  - `codeHint` (e.g. `PHY-***`) allows display without exposing the secret.
+  - `codeHint` (e.g. `DARB-****-****-A1B2`) allows display without exposing the secret.
   - Supports `expiresAt`, `maxUses`, and `currentUses`.
 - **`Enrollment`**: Associates a student with a course. Unique constraint on `[courseId, studentId]`, preventing duplicate active enrollments.
 
@@ -124,6 +125,9 @@ erDiagram
 | Migration Identifier | Name | Scope & Changes |
 |---|---|---|
 | `20261029092508_init_darb_mvp` | `init_darb_mvp` | Created all 22 initial domain tables, enums, constraints, foreign keys, indexes, `darb_app` role, `set_tenant_context()` function, and PostgreSQL RLS policies with `FORCE ROW LEVEL SECURITY`. |
+| `20261029095117_add_course_status` | `add_course_status` | Added `CourseStatus` enum (`DRAFT`, `PUBLISHED`, `ARCHIVED`) and `status` column to `Course`. |
+| `20261029095835_add_audit_actions` | `add_audit_actions` | Added course, lesson, and join code actions to `AuditAction` enum (`COURSE_UPDATED`, `COURSE_PUBLISHED`, `COURSE_ARCHIVED`, `LESSON_CREATED`, `LESSON_PUBLISHED`, `JOIN_CODE_REVOKED`). |
+| `20261029100504_rls_bypass_support` | `rls_bypass_support` | Updated all RLS policies across 15 tenant-owned tables to support transaction-scoped bypass (`SET LOCAL app.bypass_rls = 'on'`) for trusted administrative and cross-tenant join-code redemption. |
 
 ---
 

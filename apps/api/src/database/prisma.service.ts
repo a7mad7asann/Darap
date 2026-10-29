@@ -58,6 +58,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async withoutTenant<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.current_tenant_id', '', true)`;
+      await tx.$executeRaw`SELECT set_config('app.bypass_rls', 'off', true)`;
+      return callback(tx);
+    });
+  }
+
+  /**
+   * Explicitly runs an administrative or trusted global operation with RLS bypass.
+   * Transaction-scoped via SET LOCAL, automatically reset on transaction completion.
+   */
+  async withBypassRls<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.bypass_rls', 'on', true)`;
       return callback(tx);
     });
   }

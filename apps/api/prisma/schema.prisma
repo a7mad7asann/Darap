@@ -24,6 +24,12 @@ enum MembershipStatus {
   SUSPENDED
 }
 
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum EnrollmentStatus {
   ACTIVE
   COMPLETED
@@ -72,7 +78,13 @@ enum AuditAction {
   PASSWORD_RESET
   TENANT_CREATED
   COURSE_CREATED
+  COURSE_UPDATED
+  COURSE_PUBLISHED
+  COURSE_ARCHIVED
+  LESSON_CREATED
+  LESSON_PUBLISHED
   JOIN_CODE_GENERATED
+  JOIN_CODE_REVOKED
   JOIN_CODE_REDEEMED
   CROSS_TENANT_ACCESS_BLOCKED
 }
@@ -189,6 +201,7 @@ model Course {
   title        String
   description  String?
   subject      String?
+  status       CourseStatus  @default(DRAFT)
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime      @updatedAt @db.Timestamptz(6)

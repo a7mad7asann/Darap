@@ -58,122 +58,84 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 
 ---
 
-## Phase 2 — Authentication, Tenancy & Admin Controls
+## Phase 2 — Course Management, Join Codes & Student Learning
 
-- [ ] **P2-001 — Administrator Student Account Creation & Provisioning**
-  - **Status**: `NOT_STARTED`
+- [x] **P2-001 — Domain Schema & Shared Contracts Extension for Course Lifecycle**
+  - **Status**: `TESTED`
   - **Dependencies**: P1-008
-  - **Acceptance**: Admin API endpoint and UI form to create student accounts with generated usernames and initial passwords without requiring email.
-  - **File Paths**: `apps/api/src/modules/users/*`, `apps/web/src/app/(admin)/admin/students/*`
+  - **Acceptance**: `CourseStatus` enum (`DRAFT`, `PUBLISHED`, `ARCHIVED`) added to Prisma schema and contracts; new reviewed PostgreSQL migration applied; shared contracts updated with DTOs for courses, lessons, join codes, files, and admin provisioning.
+  - **File Paths**: `packages/contracts/src/*`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/*`
 
-- [ ] **P2-002 — Administrator-Assisted Password Reset Workflow**
-  - **Status**: `NOT_STARTED`
+- [x] **P2-002 — Teacher Course Management Endpoints & Ownership Verification**
+  - **Status**: `TESTED`
   - **Dependencies**: P2-001
-  - **Acceptance**: Admin endpoint to reset a student's password after identity verification; records `PASSWORD_RESET` audit log.
-  - **File Paths**: `apps/api/src/modules/auth/*`, `apps/web/src/app/(admin)/admin/students/*`
+  - **Acceptance**: Endpoints implemented under `/api/v1/teacher/courses` (`GET`, `POST`, `GET /:id`, `PATCH /:id`, `POST /:id/publish`, `POST /:id/archive`); verifies teacher role & tenant ownership under RLS; lists enrolled students.
+  - **File Paths**: `apps/api/src/modules/courses/*`
 
-- [ ] **P2-003 — Tenant Workspace Switching & Header Context Resolver**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P1-008
-  - **Acceptance**: Frontend tenant switcher for teachers/admins holding multiple tenant memberships; validates membership before switching active tenant context.
-  - **File Paths**: `apps/api/src/common/guards/tenant.guard.ts`, `apps/web/src/components/tenant-switcher.tsx`
+- [x] **P2-003 — Teacher Lesson Management & Reordering**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-002
+  - **Acceptance**: Endpoints under `/api/v1/teacher` for lesson creation (`POST courses/:courseId/lessons`), editing (`PATCH lessons/:id`), publishing (`POST lessons/:id/publish`), archiving (`POST lessons/:id/archive`), and reordering (`PUT courses/:courseId/lessons/reorder`); ownership verified server-side.
+  - **File Paths**: `apps/api/src/modules/lessons/*`
 
-- [ ] **P2-004 — Security Audit Log Viewer for Administrators**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P2-001
-  - **Acceptance**: Read-only admin view of security audit events (`USER_LOGIN`, `USER_LOGOUT`, `PASSWORD_RESET`, etc.) with pagination.
-  - **File Paths**: `apps/api/src/modules/audit/*`, `apps/web/src/app/(admin)/admin/audit/*`
-
----
-
-## Phase 3 — Courses, Lessons & Join Codes
-
-- [ ] **P3-001 — Teacher Course Management Endpoints & UI**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P1-008
-  - **Acceptance**: Teachers can create, view, edit, and archive courses within their tenant workspace under RLS.
-  - **File Paths**: `apps/api/src/modules/courses/*`, `apps/web/src/app/(teacher)/teacher/courses/*`
-
-- [ ] **P3-002 — Join-Code Generation Engine with Hash Storage**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-001
-  - **Acceptance**: Teachers generate join codes with optional expiration and usage limits; raw code displayed once; SHA-256 hash stored in `JoinCode.codeHash`.
+- [x] **P2-004 — High-Entropy Join-Code Engine & Concurrent Atomic Redemption**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-002
+  - **Acceptance**: Cryptographically secure high-entropy random code generation; display raw code to teacher once; SHA-256 hash stored in DB; never log raw code; supports optional expiration and max uses; atomic redemption with concurrency lock prevents over-use; rate-limited redemption; generic safe errors; duplicate enrollment prevention.
   - **File Paths**: `apps/api/src/modules/join-codes/*`
 
-- [ ] **P3-003 — Student Course Join & Enrollment Workflow**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-002
-  - **Acceptance**: Students submit join code; backend verifies expiration and usage limits, creates `Enrollment`, and associates student with course.
-  - **File Paths**: `apps/api/src/modules/enrollments/*`, `apps/web/src/app/(student)/student/join/*`
+- [x] **P2-005 — Student Enrollment & Course Viewer Endpoints**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-004
+  - **Acceptance**: Endpoints for student join (`POST /api/v1/student/join-courses`), enrolled courses (`GET /api/v1/student/courses`), course detail (`GET /api/v1/student/courses/:courseId`), published lessons (`GET /api/v1/student/courses/:courseId/lessons`), lesson completion (`POST /api/v1/student/lessons/:lessonId/progress`); verifies enrollment on every request; students denied draft/archived courses.
+  - **File Paths**: `apps/api/src/modules/learning/*`
 
-- [ ] **P3-004 — Lesson Authoring & Structured Content Display**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-001
-  - **Acceptance**: Teachers create lessons with text/markdown and ordering; students view published lessons in RTL reader.
-  - **File Paths**: `apps/api/src/modules/lessons/*`, `apps/web/src/app/(student)/student/courses/*`
-
-- [ ] **P3-005 — S3 Pre-Signed Upload & File Attachment Engine**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-004
-  - **Acceptance**: Pre-signed `PUT` URLs generated for PDF and worksheet uploads; MIME validation; records linked in `FileObject` and `LessonFile`.
+- [x] **P2-006 — Private File Storage Abstraction & Lesson Attachments**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-003
+  - **Acceptance**: S3-compatible storage service interface with local dev mockable adapter; presigned upload endpoint (`POST /api/v1/teacher/lessons/:id/files/presign-upload`) validating MIME, extension, size limit (25MB); complete upload endpoint (`POST /api/v1/teacher/lessons/:id/files/complete-upload`); presigned download endpoint (`GET /api/v1/student/files/:id/presign-download`) verifying enrollment; file removal endpoint.
   - **File Paths**: `apps/api/src/modules/files/*`
 
+- [x] **P2-007 — Basic Admin User Provisioning & Password Reset**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-001
+  - **Acceptance**: Admin endpoints to create teacher accounts & tenant workspaces (`POST /api/v1/admin/teachers`), create student accounts (`POST /api/v1/admin/students`), list users (`GET /api/v1/admin/users`), toggle active status (`PATCH /api/v1/admin/users/:id/status`), and perform audited password reset (`POST /api/v1/admin/users/:id/reset-password`).
+  - **File Paths**: `apps/api/src/modules/admin/*`
+
+- [x] **P2-008 — Frontend Arabic RTL Teacher Course & Lesson Views**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-002, P2-003, P2-004, P2-006
+  - **Acceptance**: RTL pages for course list, course create/edit, lesson authoring, join-code generator/revocation modal, enrolled student roster, and file attachment manager.
+  - **File Paths**: `apps/web/src/app/(teacher)/teacher/*`
+
+- [x] **P2-009 — Frontend Arabic RTL Student Course & Learning Views**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-005, P2-006
+  - **Acceptance**: RTL pages for joining a course by code, enrolled course cards, course detail viewer, lesson reader with PDF/attachment downloads, and lesson completion button with progress bar.
+  - **File Paths**: `apps/web/src/app/(student)/student/*`
+
+- [x] **P2-010 — Frontend Arabic RTL Admin Provisioning Views**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-007
+  - **Acceptance**: RTL admin interface for creating teachers/workspaces, provisioning students, toggling account status, and executing password resets.
+  - **File Paths**: `apps/web/src/app/(admin)/admin/*`
+
+- [x] **P2-011 — Comprehensive Automated Security, Concurrency & Regression Tests**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-001 through P2-010
+  - **Acceptance**: E2E automated test suite verifying cross-tenant course/lesson access denial, join-code concurrency (no over-redemption), rate limiting, enrollment verification on file downloads, student progress isolation, and Phase 1 regression verification.
+  - **File Paths**: `apps/api/test/phase2-courses-and-learning.e2e-spec.ts`
+
 ---
+
+## Phase 3 — Course Expansion, Worksheets & Rich Content
+*(Deferred to Phase 3)*
 
 ## Phase 4 — Assignments & Grading
-
-- [ ] **P4-001 — Assignment Creation & Due-Date Scheduling**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-001
-  - **Acceptance**: Teachers publish assignments with titles, instructions, max scores, and optional due dates.
-  - **File Paths**: `apps/api/src/modules/assignments/*`
-
-- [ ] **P4-002 — Student Assignment Submission Workflow**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P4-001, P3-005
-  - **Acceptance**: Students submit text and/or file attachments before or after deadline (marked LATE if overdue); prevents duplicate submissions.
-  - **File Paths**: `apps/api/src/modules/submissions/*`, `apps/web/src/app/(student)/student/assignments/*`
-
-- [ ] **P4-003 — Teacher Grading & Feedback Interface**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P4-002
-  - **Acceptance**: Teachers view student submissions, assign numerical scores and text feedback; updates `GradeRecord`.
-  - **File Paths**: `apps/api/src/modules/grading/*`, `apps/web/src/app/(teacher)/teacher/grading/*`
-
----
+*(Deferred to Phase 4)*
 
 ## Phase 5 — Multiple-Choice Exams & Automatic Grading
-
-- [ ] **P5-001 — Exam Authoring with Multiple-Choice Questions & Options**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P3-001
-  - **Acceptance**: Teachers create timed exams with questions, options, point values, and passing score; correct answers hidden from student responses.
-  - **File Paths**: `apps/api/src/modules/exams/*`, `apps/web/src/app/(teacher)/teacher/exams/*`
-
-- [ ] **P5-002 — Exam Attempt Lifecycle & Server-Enforced Deadline**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P5-001
-  - **Acceptance**: Student starts attempt; backend sets server-side `deadlineAt`; enforces maximum attempt limits; auto-submits on timeout.
-  - **File Paths**: `apps/api/src/modules/exam-attempts/*`, `apps/web/src/app/(student)/student/exams/*`
-
-- [ ] **P5-003 — Real-Time Answer Saving & Automatic Grading Engine**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P5-002
-  - **Acceptance**: Answers saved incrementally; auto-scores completed attempt upon submission; writes `GradeRecord`.
-  - **File Paths**: `apps/api/src/modules/exam-grading/*`
-
----
+*(Deferred to Phase 5)*
 
 ## Phase 6 — Pilot Readiness & Production Hardening
-
-- [ ] **P6-001 — End-to-End Pilot Workflow Acceptance Testing**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P1-008 through P5-003
-  - **Acceptance**: Complete journey tested for 2 teachers and 5 students across distinct courses, join codes, lessons, assignments, and exams.
-  - **File Paths**: `apps/api/test/pilot-journey.e2e-spec.ts`
-
-- [ ] **P6-002 — Managed Deployment Playbook & Production Configuration**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-001
-  - **Acceptance**: AWS RDS / Neon migration runbook; Cloudflare R2 bucket policies; environment secret rotation guide.
-  - **File Paths**: `docs/deployment/playbook.md`
+*(Deferred to Phase 6)*
