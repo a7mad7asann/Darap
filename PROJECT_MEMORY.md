@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Phase 4 — Assignments & Grading.
-- **Current Status**: **PHASE 4 COMPLETED & VERIFIED**. Ready to transition to Phase 5 (Multiple-Choice Exams & Automatic Grading).
+- **Current Phase**: Phase 5 — Multiple-Choice Exams & Automatic Grading.
+- **Current Status**: **PHASE 5 COMPLETED & VERIFIED**. Ready to transition to Phase 6 (Pilot Readiness & Production Hardening).
 
 ---
 
@@ -62,17 +62,17 @@ This document serves as the single source of truth for the project state, verifi
 | **Admin Provisioning & Recovery** | `TESTED` | `apps/api/src/modules/admin/*`, `apps/web/src/app/(admin)/admin/*` | Provision teacher + workspace with slug, provision student without email, user list with pagination, user status toggle, audited password reset. | CSV bulk import. | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
 | **Frontend Arabic RTL Application** | `TESTED` | `apps/web/src/app/*`, `apps/web/src/components/ui/*` | Cairo font, full RTL (`dir="rtl"`), responsive dashboards for Teacher, Student, and Admin, structured course curriculum manager, live markdown preview, section accordions, and lesson reader. | None. | `layout.test.tsx`, `next build` (all 8 static/dynamic routes) — ALL PASS |
 | **Assignments & Grading** | `TESTED` | `apps/api/src/modules/assignments/*`, `teacher-assignments-tab.tsx`, `student-assignments-view.tsx` | Assignment creation, draft/published/closed lifecycle, due dates, text and attachment submissions, 25MB limits, unique student constraint, server-side late detection, manual teacher grading, atomic `GradeRecord` sync, grade release policy. | None. | `phase4-assignments-and-grading.e2e-spec.ts` (22 tests) — ALL PASS |
-| **Exams & Auto-Grading** | `NOT_STARTED` | `schema.prisma` (`Exam`, `ExamQuestion`, `ExamAttempt`) | Schema entities exist. | Server-enforced countdown timer, attempt locking, auto-grading. | Deferred to Phase 5. |
+| **Exams & Auto-Grading** | `TESTED` | `apps/api/src/modules/exams/*`, `teacher-exams-tab.tsx`, `student-exams-view.tsx` | Multiple-choice exam creation, questions with single correct answer, server-enforced countdown timer, `isCorrect` stripped from student payload, real-time incremental answer saving, auto-grading engine, GradeRecord synchronization with best score retention, post-submission review. | None. | `phase5-exams-and-auto-grading.e2e-spec.ts` (20 tests) — ALL PASS |
 
 ---
 
 ## D. Current Position
 
-- **Last Completed Phase**: Phase 4 — Assignments & Grading (`COMPLETED`).
-- **Current Phase**: Phase 4 (`COMPLETED`). Ready to start Phase 5 (Multiple-Choice Exams & Automatic Grading).
-- **Last Completed Task**: P4-004 — Comprehensive Automated Security, Concurrency & Regression Tests.
-- **Current Task**: Completed Phase 4 implementation, tests, and documentation.
-- **Next Recommended Task**: Phase 5 kickoff (Multiple-Choice Exams & Automatic Grading).
+- **Last Completed Phase**: Phase 5 — Multiple-Choice Exams & Automatic Grading (`COMPLETED`).
+- **Current Phase**: Phase 5 (`COMPLETED`). Ready to start Phase 6 (Pilot Readiness & Production Hardening).
+- **Last Completed Task**: P5-004 — Comprehensive Automated Security, Concurrency & Regression Tests.
+- **Current Task**: Completed Phase 5 implementation, tests, and documentation.
+- **Next Recommended Task**: Phase 6 kickoff (Pilot Readiness & Production Hardening).
 - **Blocking Issues**: None.
 - **Decisions Requiring Approval**: None.
 
@@ -80,26 +80,26 @@ This document serves as the single source of truth for the project state, verifi
 
 ## E. Instructions for the Next Agent
 
-1. **Phase 4 is fully implemented and tested**:
-   - `Assignment`, `AssignmentSubmission`, `SubmissionAttachment`, `GradeRecord` integrated with PostgreSQL RLS.
-   - New audit actions added (`ASSIGNMENT_CREATED`, `ASSIGNMENT_UPDATED`, `ASSIGNMENT_PUBLISHED`, `ASSIGNMENT_CLOSED`, `SUBMISSION_CREATED`, `SUBMISSION_GRADED`) via migration `20261029123000_add_assignment_audit_actions`.
-   - Complete assignment lifecycle: draft -> published -> closed.
-   - Server-side deadline check flags submissions past due date as `status = LATE`.
-   - Server-enforced unique constraint on `(assignmentId, studentId)` safely rejects duplicate submissions.
-   - File attachment uploader (PDF/DOCX/images, 25MB, validated namespacing `tenants/{tenantId}/assignments/{assignmentId}/students/{studentId}/`).
-   - Private attachment download authorization (only the submitting student, course teacher, or admin can presign download URLs).
-   - Atomic upsert into `GradeRecord` synchronized on submission grading.
-   - Grade release policy: students see grades and feedback only when status is `GRADED`.
-   - Arabic RTL UI for teachers (`TeacherAssignmentsTab`) and students (`StudentAssignmentsView`).
-   - 100% of test suites passing: 19 unit tests, 77 E2E tests (including 22 Phase 4 E2E tests), zero lint errors, clean build.
+1. **Phase 5 is fully implemented and tested**:
+   - `Exam`, `ExamQuestion`, `QuestionOption`, `ExamAttempt`, `AttemptAnswer` integrated with PostgreSQL RLS.
+   - New audit actions added (`EXAM_CREATED`, `EXAM_UPDATED`, `EXAM_PUBLISHED`, `EXAM_CLOSED`, `EXAM_ATTEMPT_STARTED`, `EXAM_ATTEMPT_SUBMITTED`, `EXAM_AUTO_GRADED`) via migration `20261029131000_add_exam_audit_actions`.
+   - Complete exam lifecycle: draft -> published -> closed.
+   - Server-enforced countdown deadline: `deadlineAt` computed on backend, attempts auto-graded upon expiration.
+   - Security: `isCorrect` property strictly removed from questions payload returned to students during active attempts.
+   - Real-time incremental answer saving (`saveAnswer`).
+   - Automatic grading engine: compares chosen option against correct option, awards points, calculates percentage, evaluates passingScore cutoff.
+   - Atomic `GradeRecord` synchronization: keeps highest score across multiple attempts (`itemType = 'EXAM'`).
+   - Post-submission review: reveals correct answers and point breakdown after submission.
+   - Arabic RTL UI for teachers (`TeacherExamsTab`) and students (`StudentExamsView`).
+   - 100% of test suites passing: 19 unit tests, 97 E2E tests (including 20 Phase 5 E2E tests), zero lint errors, clean build.
 2. **Database Context**:
    - PostgreSQL 16 running on `localhost:5432/darb_dev`.
    - Superuser: `postgres:postgres`. Application user: `darb_app:darb_app_secret`.
-   - Applied migrations: `init_darb_mvp`, `add_course_status`, `add_audit_actions`, `rls_bypass_support`, `add_sections_and_grade_level`, `add_assignment_audit_actions`.
+   - Applied migrations: `init_darb_mvp`, `add_course_status`, `add_audit_actions`, `rls_bypass_support`, `add_sections_and_grade_level`, `add_assignment_audit_actions`, `add_exam_audit_actions`.
 3. **Execution Commands**:
    - Backend API: `pnpm dev:api` (port 4000)
    - Frontend Web: `pnpm dev:web` (port 3000)
-   - E2E Tests: `pnpm --filter @darb/api test:e2e` (77 tests)
+   - E2E Tests: `pnpm --filter @darb/api test:e2e` (97 tests)
    - Unit Tests: `pnpm test` (19 tests)
    - Monorepo Build: `pnpm build`
-4. **Next Phase**: Phase 5 — Multiple-Choice Exams & Automatic Grading (`Exam`, `ExamQuestion`, `ExamOption`, `ExamAttempt`, `ExamAnswer`, server-side timer enforcement, auto-grading engine, attempt locking).
+4. **Next Phase**: Phase 6 — Pilot Readiness & Production Hardening (monitoring, production environment configuration, security auditing, backup/restore, pilot teacher onboarding).

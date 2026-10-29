@@ -4,6 +4,57 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-10-29 — Phase 5 — P5-001 through P5-004: Multiple-Choice Exams & Automatic Grading
+
+### Summary
+- Implemented Phase 5: Multiple-Choice Exams & Automatic Grading following the confirmed repository roadmap.
+- Enforced PostgreSQL Row-Level Security on all exam entities: `Exam`, `ExamQuestion`, `ExamAttempt`, `AttemptAnswer`, and `GradeRecord`.
+- Added new audit actions: `EXAM_CREATED`, `EXAM_UPDATED`, `EXAM_PUBLISHED`, `EXAM_CLOSED`, `EXAM_ATTEMPT_STARTED`, `EXAM_ATTEMPT_SUBMITTED`, `EXAM_AUTO_GRADED` with migration `20261029131000_add_exam_audit_actions`.
+- Created comprehensive shared contracts in `packages/contracts/src/exam.ts` for exam authoring, questions, options, student attempts, real-time answer saving, auto-grading results, and reviews.
+- Implemented Teacher Exam Authoring & Management (`TeacherExamsController` & `ExamsService`):
+  - Create, edit, draft, publish, close, and soft-delete timed exams.
+  - Set duration in minutes (1–300), maximum attempts (1–10), and optional passing score threshold.
+  - Question management: add, edit, and delete multiple-choice questions with points and options.
+  - Validation: requires at least 2 options and exactly 1 correct answer (`isCorrect: true`) per question.
+  - Publish verification: requires at least 1 question with valid options and a marked correct answer.
+  - View all student attempt results and scores.
+  - Review student attempt answers with correct options and awarded points.
+- Implemented Student Exam Taking with Server-Enforced Timer (`StudentExamsController` & `ExamsService`):
+  - Start attempt: backend validates published status and attempt limit, sets server-side `startedAt` and `deadlineAt`.
+  - Security: `isCorrect` property is strictly stripped from all question options returned to students during active attempts.
+  - Real-time incremental answer saving: option selections are saved immediately to `AttemptAnswer` (`saveAnswer`).
+  - Server-enforced countdown timer: auto-grades and locks attempts expired past deadline.
+  - Attempt locking: finished attempts reject answer modifications or re-submission.
+  - Multiple attempts support: tracks remaining attempts and updates `GradeRecord` with the highest score achieved.
+- Implemented Automatic Grading Engine:
+  - Compares each question's selected option against the designated correct option.
+  - Sums up earned points vs total points, computes percentage, and checks passing score cutoff (`isPassed`).
+  - Atomic synchronization with `GradeRecord` (`itemType = 'EXAM'`), retaining the student's best attempt score.
+  - Post-submission review: reveals correct answers, awarded points, and explanations after submission.
+- Developed Arabic RTL Frontend Interfaces:
+  - Added "الاختبارات الإلكترونية" tab to Teacher Course Detail page (`TeacherExamsTab`) with exam modal, question authoring modal, and submissions view.
+  - Added "الاختبارات الإلكترونية" tab to Student Course Learning page (`StudentExamsView`) with exam taking view, sticky countdown timer bar, question pager, instant score card, and review modal.
+- Automated E2E Verification:
+  - Created `apps/api/test/phase5-exams-and-auto-grading.e2e-spec.ts` with 20 tests covering authoring, RLS isolation, server-side deadline generation, timer locking, auto-grading calculations, and GradeRecord best score synchronization.
+  - 100% test pass rate across monorepo: 97/97 E2E tests, 19/19 unit tests, 0 lint warnings, clean builds.
+
+### Files Changed
+- `apps/api/prisma/schema.prisma` — Added new `AuditAction` enum values for exams and attempts.
+- `apps/api/prisma/migrations/20261029131000_add_exam_audit_actions/migration.sql` — Applied database migration.
+- `packages/contracts/src/exam.ts`, `enums.ts`, `index.ts` — Defined exam DTOs and audit actions.
+- `apps/api/src/modules/exams/*` — Created `ExamsModule`, `ExamsService`, `TeacherExamsController`, `StudentExamsController`, and DTOs.
+- `apps/api/src/app.module.ts` — Registered `ExamsModule`.
+- `apps/web/src/lib/api-client.ts` — Added client methods for exams, questions, attempts, real-time answers, and reviews.
+- `apps/web/src/components/teacher/teacher-exams-tab.tsx` — Teacher exam and question management UI.
+- `apps/web/src/components/student/student-exams-view.tsx` — Student exam taking, timer, auto-grading, and review UI.
+- `apps/web/src/app/(teacher)/teacher/courses/[courseId]/page.tsx` — Integrated exams tab for teachers.
+- `apps/web/src/app/(student)/student/courses/[courseId]/page.tsx` — Integrated exams tab for students.
+- `apps/api/test/phase5-exams-and-auto-grading.e2e-spec.ts` — 20-test automated E2E test suite for Phase 5.
+- `docs/phases/PHASE_5_EXAMS.md` — Completed Phase 5 documentation.
+- `TASKS.md`, `PROJECT_MEMORY.md`, `CHANGELOG.md` — Updated project memory and task registry.
+
+---
+
 ## 2026-10-29 — Phase 4 — P4-001 through P4-004: Assignments & Manual Grading
 
 ### Summary

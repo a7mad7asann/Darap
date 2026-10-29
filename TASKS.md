@@ -227,7 +227,32 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 5 — Multiple-Choice Exams & Automatic Grading
-*(Deferred to Phase 5)*
+
+- [x] **P5-001 — Exam & Question Authoring**
+  - **Status**: `TESTED`
+  - **Dependencies**: P4-004
+  - **Acceptance**: Teachers create timed exams with questions, options, point values, duration, max attempts, and passing score; validates options have single correct answer; correct answers hidden from student responses; cross-tenant isolation enforced.
+  - **File Paths**: `apps/api/src/modules/exams/*`, `packages/contracts/src/exam.ts`, `apps/api/src/modules/exams/teacher-exams.controller.ts`
+
+- [x] **P5-002 — Server-Enforced Exam Timer & Attempt Locking**
+  - **Status**: `TESTED`
+  - **Dependencies**: P5-001
+  - **Acceptance**: Student starts attempt; backend sets server-side `deadlineAt`; enforces maximum attempt limits; auto-submits on timeout; strips `isCorrect` from questions payload; locks attempt against answer modifications once finished.
+  - **File Paths**: `apps/api/src/modules/exams/exams.service.ts`, `apps/api/src/modules/exams/student-exams.controller.ts`
+
+- [x] **P5-003 — Real-Time Answer Saving & Automatic Grading Engine**
+  - **Status**: `TESTED`
+  - **Dependencies**: P5-002
+  - **Acceptance**: Answers saved incrementally in real time; auto-scores completed attempt upon submission; synchronizes best score into `GradeRecord`; reveals correct answers in post-submission review.
+  - **File Paths**: `apps/api/src/modules/exams/exams.service.ts`, `apps/web/src/components/teacher/teacher-exams-tab.tsx`, `apps/web/src/components/student/student-exams-view.tsx`
+
+- [x] **P5-004 — Comprehensive Automated Security, Concurrency & Regression Tests**
+  - **Status**: `TESTED`
+  - **Dependencies**: P5-001 through P5-003
+  - **Acceptance**: 20 automated E2E tests validating exam lifecycle, cross-tenant isolation, question option constraints, student enrollment protection, server-side deadline generation, timer locking, auto-grading calculations, and GradeRecord best score synchronization. All 97 system E2E tests passing.
+  - **File Paths**: `apps/api/test/phase5-exams-and-auto-grading.e2e-spec.ts`
+
+---
 
 ## Phase 6 — Pilot Readiness & Production Hardening
 *(Deferred to Phase 6)*

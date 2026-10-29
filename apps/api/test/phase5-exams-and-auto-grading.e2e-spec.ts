@@ -82,8 +82,12 @@ describe('DARB Phase 5: Multiple-Choice Exams & Automatic Grading E2E Tests', ()
     studentSaraCookie = await login('student.sara');
 
     // Create course owned by Teacher Ahmed in Tenant 1 with Student Tariq enrolled
-    const teacherAhmed = await prisma.user.findUniqueOrThrow({ where: { username: 'teacher.ahmed' } });
-    const studentTariq = await prisma.user.findUniqueOrThrow({ where: { username: 'student.tariq' } });
+    const teacherAhmed = await prisma.user.findUniqueOrThrow({
+      where: { username: 'teacher.ahmed' },
+    });
+    const studentTariq = await prisma.user.findUniqueOrThrow({
+      where: { username: 'student.tariq' },
+    });
 
     const course = await prisma.course.create({
       data: {
@@ -172,10 +176,8 @@ describe('DARB Phase 5: Multiple-Choice Exams & Automatic Grading E2E Tests', ()
 
       question1Id = res.body.data.id;
       const correctOpt = res.body.data.options.find((o: any) => o.isCorrect);
-      const wrongOpt = res.body.data.options.find((o: any) => !o.isCorrect);
       expect(correctOpt).toBeDefined();
       q1CorrectOptId = correctOpt.id;
-      q1WrongOptId = wrongOpt.id;
     });
 
     it('Rejects adding a question with no correct answer or multiple correct answers', async () => {

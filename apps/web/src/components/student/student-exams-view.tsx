@@ -85,6 +85,7 @@ export function StudentExamsView({ courseId }: StudentExamsViewProps) {
     }, 1000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAttempt, secondsRemaining]);
 
   const handleStartExam = async (examId: string) => {

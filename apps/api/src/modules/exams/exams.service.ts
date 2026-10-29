@@ -354,12 +354,7 @@ export class ExamsService {
     });
   }
 
-  async publishExam(
-    tenantId: string,
-    teacherId: string,
-    examId: string,
-    userRole: UserRole,
-  ) {
+  async publishExam(tenantId: string, teacherId: string, examId: string, userRole: UserRole) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const exam = await tx.exam.findFirst({
         where: { id: examId, deletedAt: null },
@@ -417,12 +412,7 @@ export class ExamsService {
     });
   }
 
-  async closeExam(
-    tenantId: string,
-    teacherId: string,
-    examId: string,
-    userRole: UserRole,
-  ) {
+  async closeExam(tenantId: string, teacherId: string, examId: string, userRole: UserRole) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const exam = await tx.exam.findFirst({
         where: { id: examId, deletedAt: null },
@@ -461,12 +451,7 @@ export class ExamsService {
     });
   }
 
-  async deleteExam(
-    tenantId: string,
-    teacherId: string,
-    examId: string,
-    userRole: UserRole,
-  ) {
+  async deleteExam(tenantId: string, teacherId: string, examId: string, userRole: UserRole) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const exam = await tx.exam.findFirst({
         where: { id: examId, deletedAt: null },
@@ -1248,8 +1233,7 @@ export class ExamsService {
     }
 
     const percentage = totalPoints > 0 ? Math.round((earnedScore / totalPoints) * 100) : 0;
-    const isPassed =
-      exam.passingScore !== null ? earnedScore >= Number(exam.passingScore) : null;
+    const isPassed = exam.passingScore !== null ? earnedScore >= Number(exam.passingScore) : null;
 
     // 4. Update ExamAttempt status to GRADED
     const gradedAttempt = await tx.examAttempt.update({
@@ -1273,9 +1257,7 @@ export class ExamsService {
       },
     });
 
-    const finalScore = existingGrade
-      ? Math.max(existingGrade.score, earnedScore)
-      : earnedScore;
+    const finalScore = existingGrade ? Math.max(existingGrade.score, earnedScore) : earnedScore;
 
     await tx.gradeRecord.upsert({
       where: {
@@ -1361,17 +1343,11 @@ export class ExamsService {
       throw new NotFoundException('محاولة الاختبار غير موجودة');
     }
 
-    if (
-      userRole === UserRole.STUDENT &&
-      attempt.studentId !== studentId
-    ) {
+    if (userRole === UserRole.STUDENT && attempt.studentId !== studentId) {
       throw new ForbiddenException('غير مصرح لك بمراجعة محاولة طالب آخر');
     }
 
-    if (
-      userRole === UserRole.TEACHER &&
-      attempt.exam.course.teacherId !== studentId
-    ) {
+    if (userRole === UserRole.TEACHER && attempt.exam.course.teacherId !== studentId) {
       throw new ForbiddenException('غير مصرح لك بمراجعة نتائج اختبار لمقرر معلم آخر');
     }
 
@@ -1379,10 +1355,7 @@ export class ExamsService {
       throw new BadRequestException('لا يمكن مراجعة إجابات اختبار لا يزال قيد التنفيذ');
     }
 
-    const totalPoints = attempt.exam.questions.reduce(
-      (sum, q) => sum + Number(q.points),
-      0,
-    );
+    const totalPoints = attempt.exam.questions.reduce((sum, q) => sum + Number(q.points), 0);
     const score = attempt.score || 0;
     const percentage = totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
 
@@ -1405,8 +1378,7 @@ export class ExamsService {
       questions: attempt.exam.questions.map((q) => {
         const ans = answersMap.get(q.id);
         const correctOpt = q.options.find((o) => o.isCorrect);
-        const isCorrect =
-          ans && correctOpt && ans.selectedOptionId === correctOpt.id;
+        const isCorrect = ans && correctOpt && ans.selectedOptionId === correctOpt.id;
 
         return {
           questionId: q.id,

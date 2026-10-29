@@ -57,17 +57,13 @@ export class TeacherExamsController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @Body() dto: CreateExamNestDto,
   ) {
-    return this.examsService.createExam(
-      activeTenant.tenantId,
-      user.id,
-      courseId,
-      dto,
-      user.role,
-    );
+    return this.examsService.createExam(activeTenant.tenantId, user.id, courseId, dto, user.role);
   }
 
   @Get('exams/:examId')
-  @ApiOperation({ summary: 'Get full exam details including questions and options with correct answers' })
+  @ApiOperation({
+    summary: 'Get full exam details including questions and options with correct answers',
+  })
   async getExamDetails(
     @CurrentUser() user: UserSummaryDto,
     @CurrentTenant() activeTenant: TenantMembershipDto,
@@ -89,13 +85,7 @@ export class TeacherExamsController {
     @Param('examId', ParseUUIDPipe) examId: string,
     @Body() dto: UpdateExamNestDto,
   ) {
-    return this.examsService.updateExam(
-      activeTenant.tenantId,
-      user.id,
-      examId,
-      dto,
-      user.role,
-    );
+    return this.examsService.updateExam(activeTenant.tenantId, user.id, examId, dto, user.role);
   }
 
   @Post('exams/:examId/publish')
@@ -106,12 +96,7 @@ export class TeacherExamsController {
     @CurrentTenant() activeTenant: TenantMembershipDto,
     @Param('examId', ParseUUIDPipe) examId: string,
   ) {
-    return this.examsService.publishExam(
-      activeTenant.tenantId,
-      user.id,
-      examId,
-      user.role,
-    );
+    return this.examsService.publishExam(activeTenant.tenantId, user.id, examId, user.role);
   }
 
   @Post('exams/:examId/close')
@@ -122,12 +107,7 @@ export class TeacherExamsController {
     @CurrentTenant() activeTenant: TenantMembershipDto,
     @Param('examId', ParseUUIDPipe) examId: string,
   ) {
-    return this.examsService.closeExam(
-      activeTenant.tenantId,
-      user.id,
-      examId,
-      user.role,
-    );
+    return this.examsService.closeExam(activeTenant.tenantId, user.id, examId, user.role);
   }
 
   @Delete('exams/:examId')
@@ -137,12 +117,7 @@ export class TeacherExamsController {
     @CurrentTenant() activeTenant: TenantMembershipDto,
     @Param('examId', ParseUUIDPipe) examId: string,
   ) {
-    return this.examsService.deleteExam(
-      activeTenant.tenantId,
-      user.id,
-      examId,
-      user.role,
-    );
+    return this.examsService.deleteExam(activeTenant.tenantId, user.id, examId, user.role);
   }
 
   @Post('exams/:examId/questions')
@@ -153,13 +128,7 @@ export class TeacherExamsController {
     @Param('examId', ParseUUIDPipe) examId: string,
     @Body() dto: CreateQuestionNestDto,
   ) {
-    return this.examsService.createQuestion(
-      activeTenant.tenantId,
-      user.id,
-      examId,
-      dto,
-      user.role,
-    );
+    return this.examsService.createQuestion(activeTenant.tenantId, user.id, examId, dto, user.role);
   }
 
   @Patch('exams/:examId/questions/:questionId')

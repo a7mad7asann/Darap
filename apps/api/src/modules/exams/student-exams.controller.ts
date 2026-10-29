@@ -56,7 +56,9 @@ export class StudentExamsController {
   }
 
   @Get('exam-attempts/:attemptId/questions')
-  @ApiOperation({ summary: 'Get active attempt questions and options with isCorrect securely stripped' })
+  @ApiOperation({
+    summary: 'Get active attempt questions and options with isCorrect securely stripped',
+  })
   async getActiveAttemptQuestions(
     @CurrentUser() user: UserSummaryDto,
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
@@ -77,7 +79,9 @@ export class StudentExamsController {
 
   @Post('exam-attempts/:attemptId/submit')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Submit attempt, execute automatic grading engine, and upsert GradeRecord' })
+  @ApiOperation({
+    summary: 'Submit attempt, execute automatic grading engine, and upsert GradeRecord',
+  })
   async submitAttempt(
     @CurrentUser() user: UserSummaryDto,
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
