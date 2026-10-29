@@ -54,6 +54,16 @@ export class TeacherLessonsController {
     );
   }
 
+  @Delete(':lessonId')
+  @ApiOperation({ summary: 'Soft delete a lesson' })
+  async deleteLesson(
+    @CurrentUser() user: UserSummaryDto,
+    @CurrentTenant() activeTenant: TenantMembershipDto,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+  ) {
+    return this.lessonsService.deleteLesson(activeTenant.tenantId, user.id, lessonId, user.role);
+  }
+
   @Post(':lessonId/publish')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Publish lesson to make it visible to students' })

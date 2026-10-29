@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Phase 2 — Course Management, Join Codes & Student Learning.
-- **Current Status**: **PHASE 2 COMPLETED & VERIFIED**. Ready to transition to Phase 3.
+- **Current Phase**: Phase 3 — Course Expansion, Worksheets & Rich Content.
+- **Current Status**: **PHASE 3 COMPLETED & VERIFIED**. Ready to transition to Phase 4 (Assignments & Grading).
 
 ---
 
@@ -53,13 +53,14 @@ This document serves as the single source of truth for the project state, verifi
 | **Domain Model & DB Migrations** | `TESTED` | `apps/api/prisma/schema.prisma`, `migration.sql`, `seed.ts` | Complete domain model in schema, UUID primary keys, timestamptz(6), soft deletions, CourseStatus enum, audit actions, applied migrations (`20261029095117_add_course_status`, `20261029095835_add_audit_actions`, `20261029100504_rls_bypass_support`), realistic multi-tenant seed data. | Assignments & Exams domain logic (deferred). | `prisma migrate deploy`, `seed.ts` — SUCCESS |
 | **PostgreSQL RLS & Tenant Isolation** | `TESTED` | `apps/api/prisma/migrations/*`, `prisma.service.ts`, `tenant.guard.ts` | RLS enabled and forced on all tenant-owned tables; `set_tenant_context()` via `SET LOCAL`; `withBypassRls()` via `SET LOCAL app.bypass_rls = 'on'`; unprivileged `darb_app` role; zero connection pool leaking. | None. | `apps/api/test/tenant-rls.e2e-spec.ts` (6 tests) — ALL PASS |
 | **Auth & Security** | `TESTED` | `auth.service.ts`, `auth.controller.ts`, `auth.guard.ts`, `roles.guard.ts` | Argon2id password hashing, HTTP-only cookie sessions (`darb_session`), student username login, brute-force sliding-window rate limit, 5-attempt account lockout, audit logging (`USER_LOGIN`, `USER_LOGOUT`). | None. | `auth.service.spec.ts` (3 tests), `health-and-auth.e2e-spec.ts` (7 tests) — ALL PASS |
-| **Teacher Course Management** | `TESTED` | `apps/api/src/modules/courses/*`, `apps/web/src/app/(teacher)/teacher/*` | Course list, course creation, draft/published/archived lifecycle, course details, enrolled student roster, cross-tenant isolation enforcement. | None. | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
-| **Teacher Lesson Management** | `TESTED` | `apps/api/src/modules/lessons/*` | Lesson creation, text content, ordering, publication toggle, archive toggle, reordering endpoint, teacher ownership checks. | Rich text / markdown editor. | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
+| **Teacher Course Management** | `TESTED` | `apps/api/src/modules/courses/*`, `apps/web/src/app/(teacher)/teacher/*` | Course list, course creation, draft/published/archived lifecycle, course details, enrolled student roster, cross-tenant isolation enforcement, grade level metadata (`gradeLevel`). | None. | `phase2-courses-and-learning.e2e-spec.ts`, `phase3-course-expansion.e2e-spec.ts` — PASS |
+| **Sections & Curriculum Organization** | `TESTED` | `apps/api/src/modules/sections/*`, `packages/contracts/src/section.ts`, `schema.prisma` | Section model, PostgreSQL RLS (`section_tenant_isolation`), CRUD endpoints under `/api/v1/teacher`, automatic order indexing, reordering, cross-tenant access denial, safe deletion detaching lessons without data loss. | None. | `phase3-course-expansion.e2e-spec.ts` — PASS |
+| **Teacher Lesson Management & Rich Editor** | `TESTED` | `apps/api/src/modules/lessons/*`, `apps/web/src/components/ui/rich-editor.tsx` | Lesson creation, section assignment, server-side content sanitization (`ContentSanitizer`), soft-delete, reordering, rich markdown editor with formatting toolbar and live RTL preview tab. | None. | `phase2-courses-and-learning.e2e-spec.ts`, `phase3-course-expansion.e2e-spec.ts` — PASS |
 | **Cryptographic Join-Code Engine** | `TESTED` | `apps/api/src/modules/join-codes/*` | High-entropy crypto code generator (`DARB-XXXX-XXXX-XXXX`), SHA-256 hash stored in DB, raw code displayed once, never logged in plaintext, optional maxUses and expiration, atomic row lock (`FOR UPDATE`) preventing concurrent over-use, generic safe rejection messages, rate limiting. | QR code image generation (optional). | `phase2-courses-and-learning.e2e-spec.ts` (concurrency & isolation tests) — PASS |
-| **Student Learning & Progress** | `TESTED` | `apps/api/src/modules/learning/*`, `apps/web/src/app/(student)/student/*` | Code redemption, enrolled courses list, course learning view with published lessons, lesson reader, progress completion toggle and calculation. | Quizzes (deferred to Phase 5). | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
-| **File Storage & Lesson Attachments** | `TESTED` | `apps/api/src/modules/files/*` | S3-compatible storage abstraction with LocalStorageProvider fallback, presigned upload URLs (MIME, ext, 25MB validation), upload completion, presigned download URLs with enrollment verification, file deletion. | AWS S3 production credentials config. | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
+| **Student Learning & Section Navigation** | `TESTED` | `apps/api/src/modules/learning/*`, `apps/web/src/app/(student)/student/*` | Code redemption, enrolled courses list, sectioned curriculum sidebar with collapsible units, lesson reader with safe Arabic markdown, previous/next lesson navigation, progress completion toggle and calculation. | Quizzes (deferred to Phase 5). | `phase2-courses-and-learning.e2e-spec.ts`, `phase3-course-expansion.e2e-spec.ts` — PASS |
+| **File Storage, Worksheets & Security Hardening** | `TESTED` | `apps/api/src/modules/files/*`, `apps/web/src/components/ui/markdown-content.tsx` | S3 storage abstraction, strict storageKey prefix verification (`tenants/${tenantId}/lessons/${lessonId}/`), MIME & 25MB validation, strict download denial on unpublished lessons (403 Forbidden), worksheet download badges. | AWS S3 production credentials config. | `phase2-courses-and-learning.e2e-spec.ts`, `phase3-course-expansion.e2e-spec.ts` — PASS |
 | **Admin Provisioning & Recovery** | `TESTED` | `apps/api/src/modules/admin/*`, `apps/web/src/app/(admin)/admin/*` | Provision teacher + workspace with slug, provision student without email, user list with pagination, user status toggle, audited password reset. | CSV bulk import. | `phase2-courses-and-learning.e2e-spec.ts` — PASS |
-| **Frontend Arabic RTL Application** | `TESTED` | `apps/web/src/app/*`, `apps/web/src/components/ui/*` | Cairo font, full RTL (`dir="rtl"`), responsive dashboards for Teacher, Student, and Admin, Course management, Lesson viewer, Join-code redemption, and one-time display banners. | None. | `layout.test.tsx`, `next build` (all 8 static/dynamic routes) — ALL PASS |
+| **Frontend Arabic RTL Application** | `TESTED` | `apps/web/src/app/*`, `apps/web/src/components/ui/*` | Cairo font, full RTL (`dir="rtl"`), responsive dashboards for Teacher, Student, and Admin, structured course curriculum manager, live markdown preview, section accordions, and lesson reader. | None. | `layout.test.tsx`, `next build` (all 8 static/dynamic routes) — ALL PASS |
 | **Assignments & Grading** | `NOT_STARTED` | `schema.prisma` (`Assignment`, `AssignmentSubmission`) | Schema entities exist. | Submission upload, grading service, score calculation. | Deferred to Phase 4. |
 | **Exams & Auto-Grading** | `NOT_STARTED` | `schema.prisma` (`Exam`, `ExamQuestion`, `ExamAttempt`) | Schema entities exist. | Server-enforced countdown timer, attempt locking, auto-grading. | Deferred to Phase 5. |
 
@@ -67,27 +68,34 @@ This document serves as the single source of truth for the project state, verifi
 
 ## D. Current Position
 
-- **Last Completed Phase**: Phase 2 — Course Management, Join Codes & Student Learning (`COMPLETED`).
-- **Current Phase**: Phase 2 (`COMPLETED`). Ready to start Phase 3.
-- **Last Completed Task**: P2-011 — Comprehensive Automated Security, Concurrency & Regression Tests.
-- **Current Task**: Completed Phase 2 implementation, tests, and documentation.
-- **Next Recommended Task**: Phase 3 planning and kickoff (Course Expansion, Worksheets & Rich Content).
+- **Last Completed Phase**: Phase 3 — Course Expansion, Worksheets & Rich Content (`COMPLETED`).
+- **Current Phase**: Phase 3 (`COMPLETED`). Ready to start Phase 4 (Assignments & Grading).
+- **Last Completed Task**: P3-011 — Comprehensive Automated Security, Concurrency & Regression Tests.
+- **Current Task**: Completed Phase 3 implementation, tests, and documentation.
+- **Next Recommended Task**: Phase 4 kickoff (Assignments & Grading).
 - **Blocking Issues**: None.
-- **Decisions Requiring Approval**: S3 production bucket provider selection (AWS S3 vs Cloudflare R2).
+- **Decisions Requiring Approval**: None.
 
 ---
 
 ## E. Instructions for the Next Agent
 
-1. **Phase 2 is fully implemented and tested**: All courses, lessons, cryptographic join codes, file presigned upload/download abstractions, student learning views, admin provisioning, and RLS policies are verified and passing 100% of tests.
+1. **Phase 3 is fully implemented and tested**:
+   - `Section` domain entity with migration `20261029112020_add_sections_and_grade_level` and PostgreSQL RLS (`section_tenant_isolation`) applied.
+   - Server-side stored XSS sanitization in `ContentSanitizer` protecting against script injection, event handlers, and javascript protocols while preserving Arabic text and Markdown.
+   - Storage upload completion hardening (strictly validating `tenants/${tenantId}/lessons/${lessonId}/` prefix, allowed MIME, and 25MB limits).
+   - Strict file download denial on draft/unpublished lessons (`lesson.isPublished === true` enforced).
+   - Rich Markdown Editor with formatting toolbar and Live RTL Preview for teachers.
+   - Sectioned curriculum navigation, rich reader, and previous/next lesson controls for students.
+   - 100% of test suites passing: 19 unit tests, 55 E2E tests, zero lint errors, clean build.
 2. **Database Context**:
    - PostgreSQL 16 running on `localhost:5432/darb_dev`.
    - Superuser: `postgres:postgres`. Application user: `darb_app:darb_app_secret`.
-   - All migrations applied (`init_darb_mvp`, `add_course_status`, `add_audit_actions`, `rls_bypass_support`).
+   - Applied migrations: `init_darb_mvp`, `add_course_status`, `add_audit_actions`, `rls_bypass_support`, `add_sections_and_grade_level`.
 3. **Execution Commands**:
    - Backend API: `pnpm dev:api` (port 4000)
    - Frontend Web: `pnpm dev:web` (port 3000)
-   - E2E Tests: `pnpm --filter @darb/api test:e2e` (38 tests)
-   - Unit Tests: `pnpm test` (16 tests)
-   - Lint & Typecheck: `pnpm lint && pnpm typecheck`
-4. **Next Phase**: Move forward to Phase 3 or subsequent phases as requested by the user.
+   - E2E Tests: `pnpm --filter @darb/api test:e2e` (55 tests)
+   - Unit Tests: `pnpm test` (19 tests)
+   - Monorepo Build: `pnpm build`
+4. **Next Phase**: Phase 4 — Assignments & Grading (`Assignment`, `AssignmentSubmission`, manual grading, rubrics, and feedback).

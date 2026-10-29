@@ -19,7 +19,12 @@ import {
   Upload,
   Send,
   Archive,
-  RefreshCw,
+  FolderPlus,
+  Folder,
+  Edit2,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -27,11 +32,14 @@ import { Input } from '@/components/ui/input';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { RichEditor } from '@/components/ui/rich-editor';
+import { MarkdownContent } from '@/components/ui/markdown-content';
 import { apiClient } from '@/lib/api-client';
 import {
   CourseDetailsDto,
   CourseStatus,
   LessonDto,
+  SectionSummaryDto,
   JoinCodeSummaryDto,
   EnrolledStudentSummaryDto,
 } from '@darb/contracts';
@@ -48,10 +56,19 @@ export default function TeacherCourseDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Section modal state
+  const [showSectionModal, setShowSectionModal] = React.useState(false);
+  const [editingSection, setEditingSection] = React.useState<SectionSummaryDto | null>(null);
+  const [sectionTitle, setSectionTitle] = React.useState('');
+  const [sectionDescription, setSectionDescription] = React.useState('');
+  const [submittingSection, setSubmittingSection] = React.useState(false);
+
   // Lesson modal state
   const [showLessonModal, setShowLessonModal] = React.useState(false);
+  const [editingLessonId, setEditingLessonId] = React.useState<string | null>(null);
   const [lessonTitle, setLessonTitle] = React.useState('');
   const [lessonContent, setLessonContent] = React.useState('');
+  const [lessonSectionId, setLessonSectionId] = React.useState<string>('');
   const [submittingLesson, setSubmittingLesson] = React.useState(false);
 
   // Join code modal state
@@ -91,31 +108,169 @@ export default function TeacherCourseDetailPage() {
     loadCourseData();
   }, [loadCourseData]);
 
-  const handleCreateLesson = async (e: React.FormEvent) => {
+  // Section Handlers
+  const handleOpenCreateSection = () => {
+    setEditingSection(null);
+    setSectionTitle('');
+    setSectionDescription('');
+    setShowSectionModal(true);
+  };
+
+  const handleOpenEditSection = (section: SectionSummaryDto) => {
+    setEditingSection(section);
+    setSectionTitle(section.title);
+    setSectionDescription(section.description || '');
+    setShowSectionModal(true);
+  };
+
+  const handleSaveSection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sectionTitle.trim()) return;
+
+    setSubmittingSection(true);
+    try {
+      if (editingSection) {
+        const updated = await apiClient.updateSection(editingSection.id, {
+          title: sectionTitle.trim(),
+          description: sectionDescription.trim() || undefined,
+        });
+        setCourse((prev) =>
+          prev
+            ? {
+                ...prev,
+                sections: (prev.sections || []).map((s) => (s.id === updated.id ? updated : s)),
+              }
+            : prev,
+        );
+      } else {
+        const created = await apiClient.createSection(courseId, {
+          title: sectionTitle.trim(),
+          description: sectionDescription.trim() || undefined,
+        });
+        setCourse((prev) =>
+          prev
+            ? {
+                ...prev,
+                sections: [...(prev.sections || []), created],
+              }
+            : prev,
+        );
+      }
+      setShowSectionModal(false);
+      setSectionTitle('');
+      setSectionDescription('');
+      setEditingSection(null);
+    } catch (err: any) {
+      alert(err.message || 'تعذر حفظ بيانات القسم');
+    } finally {
+      setSubmittingSection(false);
+    }
+  };
+
+  const handleDeleteSection = async (sectionId: string) => {
+    if (
+      !confirm(
+        'هل أنت متأكد من حذف هذا القسم؟ سيتم نقل الدروس التابعة له إلى الدروس العامة دون حذفها.',
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiClient.deleteSection(sectionId);
+      setCourse((prev) =>
+        prev
+          ? {
+              ...prev,
+              sections: (prev.sections || []).filter((s) => s.id !== sectionId),
+              lessons: prev.lessons.map((l) =>
+                l.sectionId === sectionId ? { ...l, sectionId: null, sectionTitle: null } : l,
+              ),
+            }
+          : prev,
+      );
+    } catch (err: any) {
+      alert(err.message || 'تعذر حذف القسم');
+    }
+  };
+
+  // Lesson Handlers
+  const handleOpenCreateLesson = (defaultSectionId: string = '') => {
+    setEditingLessonId(null);
+    setLessonTitle('');
+    setLessonContent('');
+    setLessonSectionId(defaultSectionId);
+    setShowLessonModal(true);
+  };
+
+  const handleOpenEditLesson = (lesson: LessonDto) => {
+    setEditingLessonId(lesson.id);
+    setLessonTitle(lesson.title);
+    setLessonContent(lesson.content || '');
+    setLessonSectionId(lesson.sectionId || '');
+    setShowLessonModal(true);
+  };
+
+  const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lessonTitle.trim()) return;
 
     setSubmittingLesson(true);
     try {
-      const newLesson = await apiClient.createLesson(courseId, {
-        title: lessonTitle.trim(),
-        content: lessonContent.trim() || undefined,
-      });
+      if (editingLessonId) {
+        const updated = await apiClient.updateLesson(editingLessonId, {
+          title: lessonTitle.trim(),
+          content: lessonContent.trim() || undefined,
+          sectionId: lessonSectionId ? lessonSectionId : null,
+        });
+        setCourse((prev) =>
+          prev
+            ? {
+                ...prev,
+                lessons: prev.lessons.map((l) => (l.id === editingLessonId ? { ...l, ...updated } : l)),
+              }
+            : prev,
+        );
+      } else {
+        const newLesson = await apiClient.createLesson(courseId, {
+          title: lessonTitle.trim(),
+          content: lessonContent.trim() || undefined,
+          sectionId: lessonSectionId ? lessonSectionId : undefined,
+        });
+        setCourse((prev) =>
+          prev
+            ? {
+                ...prev,
+                lessons: [...prev.lessons, newLesson],
+              }
+            : prev,
+        );
+      }
+      setShowLessonModal(false);
+      setLessonTitle('');
+      setLessonContent('');
+      setLessonSectionId('');
+      setEditingLessonId(null);
+    } catch (err: any) {
+      alert(err.message || 'تعذر حفظ الدرس');
+    } finally {
+      setSubmittingLesson(false);
+    }
+  };
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الدرس؟')) return;
+    try {
+      await apiClient.deleteLesson(lessonId);
       setCourse((prev) =>
         prev
           ? {
               ...prev,
-              lessons: [...prev.lessons, newLesson],
+              lessons: prev.lessons.filter((l) => l.id !== lessonId),
             }
           : prev,
       );
-      setShowLessonModal(false);
-      setLessonTitle('');
-      setLessonContent('');
     } catch (err: any) {
-      alert(err.message || 'تعذر إنشاء الدرس');
-    } finally {
-      setSubmittingLesson(false);
+      alert(err.message || 'تعذر حذف الدرس');
     }
   };
 
@@ -126,7 +281,9 @@ export default function TeacherCourseDetailPage() {
         prev
           ? {
               ...prev,
-              lessons: prev.lessons.map((l) => (l.id === lessonId ? updated : l)),
+              lessons: prev.lessons.map((l) =>
+                l.id === lessonId ? { ...l, isPublished: updated.isPublished } : l,
+              ),
             }
           : prev,
       );
@@ -135,6 +292,25 @@ export default function TeacherCourseDetailPage() {
     }
   };
 
+  const handleArchiveLesson = async (lessonId: string) => {
+    try {
+      const updated = await apiClient.archiveLesson(lessonId);
+      setCourse((prev) =>
+        prev
+          ? {
+              ...prev,
+              lessons: prev.lessons.map((l) =>
+                l.id === lessonId ? { ...l, isPublished: updated.isPublished } : l,
+              ),
+            }
+          : prev,
+      );
+    } catch (err: any) {
+      alert(err.message || 'تعذر إلغاء نشر الدرس');
+    }
+  };
+
+  // Join Code Handlers
   const handleGenerateCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingCode(true);
@@ -178,6 +354,7 @@ export default function TeacherCourseDetailPage() {
     }
   };
 
+  // File Upload Handlers
   const handleTriggerUpload = (lessonId: string) => {
     setUploadingForLessonId(lessonId);
     fileInputRef.current?.click();
@@ -189,14 +366,12 @@ export default function TeacherCourseDetailPage() {
 
     setUploading(true);
     try {
-      // 1. Request presigned upload URL
       const presign = await apiClient.presignLessonUpload(uploadingForLessonId, {
         fileName: file.name,
         mimeType: file.type || 'application/pdf',
         byteSize: file.size,
       });
 
-      // 2. Upload file to presigned URL
       const uploadRes = await fetch(presign.uploadUrl, {
         method: 'PUT',
         headers: {
@@ -209,7 +384,6 @@ export default function TeacherCourseDetailPage() {
         throw new Error('فشل رفع الملف إلى وحدة التخزين');
       }
 
-      // 3. Complete and link file to lesson
       await apiClient.completeUpload(uploadingForLessonId, {
         storageKey: presign.storageKey,
         fileName: file.name,
@@ -261,13 +435,16 @@ export default function TeacherCourseDetailPage() {
     );
   }
 
+  const sections = course.sections || [];
+  const unsectionedLessons = course.lessons.filter((l) => !l.sectionId);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" dir="rtl">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg"
+        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.txt"
         onChange={handleFileSelected}
         className="hidden"
       />
@@ -359,11 +536,16 @@ export default function TeacherCourseDetailPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
                     {course.subject || 'عام'}
                   </span>
+                  {course.gradeLevel && (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      المرحلة: {course.gradeLevel}
+                    </span>
+                  )}
                   {course.status === CourseStatus.PUBLISHED ? (
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                       منشور للطلاب
@@ -375,12 +557,16 @@ export default function TeacherCourseDetailPage() {
                   )}
                 </div>
                 <h1 className="text-2xl font-bold text-slate-800">{course.title}</h1>
-                <p className="text-sm text-slate-600 max-w-3xl">
+                <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
                   {course.description || 'لا يوجد وصف تفصيلي.'}
                 </p>
               </div>
 
               <div className="flex items-center gap-4 text-xs text-slate-500 border-t md:border-t-0 md:border-r pr-0 md:pr-6 pt-3 md:pt-0">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-slate-800">{sections.length}</p>
+                  <p>وحدات</p>
+                </div>
                 <div className="text-center">
                   <p className="text-xl font-bold text-slate-800">{course.lessons.length}</p>
                   <p>دروس</p>
@@ -409,7 +595,7 @@ export default function TeacherCourseDetailPage() {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            الدروس والمحتوى ({course.lessons.length})
+            الهيكل والدروس ({course.lessons.length})
           </button>
           <button
             onClick={() => setActiveTab('codes')}
@@ -435,27 +621,109 @@ export default function TeacherCourseDetailPage() {
           </button>
         </div>
 
-        {/* TAB 1: Lessons & Content */}
+        {/* TAB 1: Sections & Lessons */}
         {activeTab === 'lessons' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800">قائمة دروس المقرر</h2>
-              <Button
-                onClick={() => setShowLessonModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                size="sm"
-              >
-                <PlusCircle className="w-4 h-4 ml-1" />
-                إضافة درس جديد
-              </Button>
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">هيكل المقرر الدراسي والدروس</h2>
+                <p className="text-xs text-slate-500">
+                  قم بتنظيم الدروس في وحدات/أقسام تعليمية وارفق أوراق العمل ومستندات الشرح
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleOpenCreateSection}
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                >
+                  <FolderPlus className="w-4 h-4 ml-1" />
+                  إضافة وحدة / قسم
+                </Button>
+                <Button
+                  onClick={() => handleOpenCreateLesson('')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  size="sm"
+                >
+                  <PlusCircle className="w-4 h-4 ml-1" />
+                  إضافة درس جديد
+                </Button>
+              </div>
             </div>
 
-            {/* Create Lesson Modal */}
-            {showLessonModal && (
+            {/* Section Modal */}
+            {showSectionModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
                   <div className="flex items-center justify-between border-b pb-3">
-                    <h3 className="text-lg font-bold text-slate-800">إضافة درس جديد</h3>
+                    <h3 className="text-lg font-bold text-slate-800">
+                      {editingSection ? 'تعديل بيانات القسم' : 'إضافة وحدة / قسم جديد'}
+                    </h3>
+                    <button
+                      onClick={() => setShowSectionModal(false)}
+                      className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveSection} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        عنوان القسم / الوحدة <span className="text-rose-500">*</span>
+                      </label>
+                      <Input
+                        required
+                        value={sectionTitle}
+                        onChange={(e) => setSectionTitle(e.target.value)}
+                        placeholder="مثال: الوحدة الأولى: الدوال والمتباينات"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        وصف موجز للقسم (اختياري)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={sectionDescription}
+                        onChange={(e) => setSectionDescription(e.target.value)}
+                        placeholder="أدخل ملخصاً أو أهداف هذه الوحدة التعليمية..."
+                        className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowSectionModal(false)}
+                        disabled={submittingSection}
+                      >
+                        إلغاء
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={submittingSection}
+                      >
+                        {submittingSection ? 'جاري الحفظ...' : 'حفظ القسم'}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Lesson Modal (Create / Edit with Rich Editor) */}
+            {showLessonModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 space-y-4 my-8">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="text-lg font-bold text-slate-800">
+                      {editingLessonId ? 'تعديل الدرس' : 'إضافة درس تعليمي جديد'}
+                    </h3>
                     <button
                       onClick={() => setShowLessonModal(false)}
                       className="text-slate-400 hover:text-slate-600 text-xl font-bold"
@@ -464,33 +732,52 @@ export default function TeacherCourseDetailPage() {
                     </button>
                   </div>
 
-                  <form onSubmit={handleCreateLesson} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        عنوان الدرس <span className="text-rose-500">*</span>
-                      </label>
-                      <Input
-                        required
-                        value={lessonTitle}
-                        onChange={(e) => setLessonTitle(e.target.value)}
-                        placeholder="مثال: مقدمة في حساب التفاضل والتكامل"
-                      />
+                  <form onSubmit={handleSaveLesson} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          عنوان الدرس <span className="text-rose-500">*</span>
+                        </label>
+                        <Input
+                          required
+                          value={lessonTitle}
+                          onChange={(e) => setLessonTitle(e.target.value)}
+                          placeholder="مثال: خصائص الأعداد الحقيقية"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          القسم / الوحدة التابع لها
+                        </label>
+                        <select
+                          value={lessonSectionId}
+                          onChange={(e) => setLessonSectionId(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 p-2.5 text-sm bg-white focus:border-emerald-500 focus:outline-none"
+                        >
+                          <option value="">دروس عامة (بدون قسم)</option>
+                          {sections.map((sec) => (
+                            <option key={sec.id} value={sec.id}>
+                              {sec.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        محتوى الشرح (نصي)
+                        محتوى الشرح والتوضيح (يدعم تنسيق Markdown ومعاينة حية)
                       </label>
-                      <textarea
-                        rows={6}
+                      <RichEditor
                         value={lessonContent}
-                        onChange={(e) => setLessonContent(e.target.value)}
-                        placeholder="أدخل نص المحاضرة والشروحات التعليمية هنا..."
-                        className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                        onChange={setLessonContent}
+                        placeholder="اكتب محتوى الشرح، المعادلات، التمارين، والنقاط الرئيسية هنا..."
+                        minHeight="min-h-[260px]"
                       />
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2 border-t">
+                    <div className="flex justify-end gap-2 pt-3 border-t">
                       <Button
                         type="button"
                         variant="outline"
@@ -504,7 +791,7 @@ export default function TeacherCourseDetailPage() {
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
                         disabled={submittingLesson}
                       >
-                        {submittingLesson ? 'جاري الحفظ...' : 'حفظ الدرس'}
+                        {submittingLesson ? 'جاري الحفظ...' : 'حفظ بيانات الدرس'}
                       </Button>
                     </div>
                   </form>
@@ -512,107 +799,122 @@ export default function TeacherCourseDetailPage() {
               </div>
             )}
 
-            {/* Lessons List */}
-            {course.lessons.length === 0 ? (
+            {/* Curriculum Tree (Sections and Lessons) */}
+            {sections.length === 0 && course.lessons.length === 0 ? (
               <EmptyState
-                title="لا توجد دروس مضافة لهذا المقرر بعد"
-                message="أضف أول درس وارفق ملفات الشرح والمستندات التعليمية."
-                actionLabel="إضافة درس"
-                onAction={() => setShowLessonModal(true)}
+                title="لا توجد وحدات أو دروس مضافة لهذا المقرر بعد"
+                message="ابدأ بإضافة وحدة دراسية جديدة أو أضف أول درس لطلابك."
+                actionLabel="إضافة وحدة / قسم"
+                onAction={handleOpenCreateSection}
               />
             ) : (
-              <div className="space-y-4">
-                {course.lessons.map((lesson, idx) => (
-                  <Card key={lesson.id} className="border-slate-200">
-                    <CardHeader className="py-4 px-6 flex flex-row items-center justify-between border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-sm">
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <CardTitle className="text-base font-bold text-slate-800">
-                            {lesson.title}
-                          </CardTitle>
-                          <span className="text-xs text-slate-400">
-                            الترتيب: {lesson.orderIndex + 1}
+              <div className="space-y-6">
+                {/* 1. Render Defined Sections */}
+                {sections.map((section, sIdx) => {
+                  const sectionLessons = course.lessons.filter((l) => l.sectionId === section.id);
+                  return (
+                    <div
+                      key={section.id}
+                      className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                    >
+                      {/* Section Header */}
+                      <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">
+                            {sIdx + 1}
                           </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {lesson.isPublished ? (
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            منشور
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePublishLesson(lesson.id)}
-                            className="text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                          >
-                            <Send className="w-3.5 h-3.5 ml-1" />
-                            نشر الدرس
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTriggerUpload(lesson.id)}
-                          disabled={uploading}
-                          className="text-xs"
-                        >
-                          <Upload className="w-3.5 h-3.5 ml-1" />
-                          إرفاق ملف
-                        </Button>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="p-6 space-y-4">
-                      {lesson.content ? (
-                        <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                          {lesson.content}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic">لا يوجد محتوى نصي مضاف.</p>
-                      )}
-
-                      {/* Attached files */}
-                      {lesson.files && lesson.files.length > 0 && (
-                        <div className="space-y-2 pt-2 border-t border-slate-100">
-                          <p className="text-xs font-bold text-slate-600 flex items-center gap-1">
-                            <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                            الملفات المرفقة ({lesson.files.length}):
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {lesson.files.map((file: any) => (
-                              <div
-                                key={file.id}
-                                className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white text-xs"
-                              >
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                                  <span className="font-medium truncate">{file.originalName}</span>
-                                  <span className="text-slate-400 shrink-0">
-                                    ({(file.byteSize / 1024 / 1024).toFixed(1)} MB)
-                                  </span>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteFile(lesson.id, file.id)}
-                                  className="text-rose-500 hover:text-rose-700 p-1 h-auto"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            ))}
+                          <div>
+                            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                              <Folder className="w-4 h-4 text-emerald-600" />
+                              {section.title}
+                            </h3>
+                            {section.description && (
+                              <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                                {section.description}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-slate-500 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                            {sectionLessons.length} دروس
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenCreateLesson(section.id)}
+                            className="text-emerald-700 hover:bg-emerald-50 text-xs"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5 ml-1" />
+                            درس بالقسم
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenEditSection(section)}
+                            className="text-slate-600 hover:bg-slate-200 text-xs p-1.5"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteSection(section.id)}
+                            className="text-rose-600 hover:bg-rose-50 text-xs p-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Section Lessons */}
+                      <div className="p-4 space-y-3">
+                        {sectionLessons.length === 0 ? (
+                          <div className="p-6 text-center text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            لا توجد دروس في هذه الوحدة حتى الآن.{' '}
+                            <button
+                              onClick={() => handleOpenCreateLesson(section.id)}
+                              className="text-emerald-600 font-semibold underline hover:text-emerald-700"
+                            >
+                              أضف درساً الآن
+                            </button>
+                          </div>
+                        ) : (
+                          sectionLessons.map((lesson, lIdx) => renderLessonCard(lesson, lIdx))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* 2. Render Unsectioned Lessons (if any) */}
+                {unsectionedLessons.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-slate-500" />
+                        <h3 className="font-bold text-slate-800 text-base">دروس عامة (بدون قسم)</h3>
+                        <span className="text-xs text-slate-400 mr-2">
+                          ({unsectionedLessons.length} دروس)
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleOpenCreateLesson('')}
+                        className="text-emerald-700 hover:bg-emerald-50 text-xs"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5 ml-1" />
+                        إضافة درس عام
+                      </Button>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {unsectionedLessons.map((lesson, lIdx) => renderLessonCard(lesson, lIdx))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -706,71 +1008,67 @@ export default function TeacherCourseDetailPage() {
               </div>
             )}
 
-            {/* Codes List Table */}
+            {/* Codes List */}
             {joinCodes.length === 0 ? (
               <EmptyState
-                title="لا توجد رموز انضمام لهذا المقرر حتى الآن"
-                message="قم بتوليد كود انضمام لتزويده لطلابك ليتمكنوا من التسجيل في المقرر."
-                actionLabel="توليد كود انضمام"
+                title="لا توجد أكواد انضمام منشأة لهذا المقرر"
+                message="أنشئ كود انضمام ليتمكن طلابك من التسجيل في المقرر مباشرة."
+                actionLabel="توليد كود"
                 onAction={() => setShowCodeModal(true)}
               />
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <table className="w-full text-right text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold">
-                    <tr>
-                      <th className="py-3 px-4">تلميح الرمز (Hint)</th>
-                      <th className="py-3 px-4">مرات الاستخدام</th>
-                      <th className="py-3 px-4">تاريخ الانتهاء</th>
-                      <th className="py-3 px-4">الحالة</th>
-                      <th className="py-3 px-4 text-center">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {joinCodes.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-800">
-                          {c.codeHint}
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">
-                          {c.currentUses} / {c.maxUses ?? 'غير محدود'}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500 text-xs">
-                          {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('ar-EG') : 'دائم'}
-                        </td>
-                        <td className="py-3 px-4">
-                          {c.status === 'ACTIVE' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {joinCodes.map((c) => {
+                  const isRevoked = c.status === 'REVOKED';
+                  const isExpired = c.expiresAt && new Date(c.expiresAt) < new Date();
+                  const isFull = c.maxUses && c.currentUses >= c.maxUses;
+                  const isActive = !isRevoked && !isExpired && !isFull;
+
+                  return (
+                    <Card key={c.id} className="border-slate-200">
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-base font-bold bg-slate-100 px-3 py-1 rounded-md text-slate-800">
+                            {c.codeHint}
+                          </span>
+                          {isActive ? (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              نشط
+                              نشط وصالح
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                              {isRevoked ? 'ملغى' : isExpired ? 'منتهي الصلاحية' : 'مكتمل الاستخدام'}
                             </span>
                           )}
-                          {c.status === 'EXPIRED' && (
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300">
-                              منتهي الصلاحية
-                            </span>
-                          )}
-                          {c.status === 'REVOKED' && (
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                              ملغي
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {c.status === 'ACTIVE' && (
+                        </div>
+
+                        <div className="text-xs text-slate-600 space-y-1">
+                          <p>
+                            الاستخدام: <strong>{c.currentUses}</strong> /{' '}
+                            {c.maxUses ? c.maxUses : 'غير محدود'}
+                          </p>
+                          <p>
+                            تاريخ الصلاحية:{' '}
+                            {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('ar-EG') : 'دائم'}
+                          </p>
+                        </div>
+
+                        {isActive && (
+                          <div className="pt-2 border-t flex justify-end">
                             <Button
-                              variant="ghost"
                               size="sm"
+                              variant="outline"
                               onClick={() => handleRevokeCode(c.id)}
-                              className="text-rose-600 hover:bg-rose-50 text-xs"
+                              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
                             >
-                              إلغاء الكود
+                              إلغاء تفعيل الكود
                             </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -779,39 +1077,29 @@ export default function TeacherCourseDetailPage() {
         {/* TAB 3: Enrolled Students */}
         {activeTab === 'students' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-slate-800">قائمة الطلاب المسجلين بالمقرر</h2>
-
+            <h2 className="text-lg font-bold text-slate-800">الطلاب المسجلون في المقرر</h2>
             {students.length === 0 ? (
               <EmptyState
-                title="لم ينضم أي طالب للمقرر حتى الآن"
-                message="شارك كود الانضمام مع طلابك وسيظهرون في هذا السجل فور انضمامهم."
-                actionLabel="توليد كود انضمام"
-                onAction={() => {
-                  setActiveTab('codes');
-                  setShowCodeModal(true);
-                }}
+                title="لا يوجد طلاب مسجلون بعد"
+                message="شارك كود الانضمام مع طلابك وسيظهرون هنا فور تسجيلهم."
               />
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <table className="w-full text-right text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold">
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                     <tr>
-                      <th className="py-3 px-4">اسم الطالب</th>
-                      <th className="py-3 px-4">اسم المستخدم</th>
-                      <th className="py-3 px-4">تاريخ الانضمام</th>
-                      <th className="py-3 px-4">كود الانضمام المستخدم</th>
+                      <th className="p-3">اسم الطالب</th>
+                      <th className="p-3">اسم المستخدم</th>
+                      <th className="p-3">تاريخ الانضمام</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {students.map((s) => (
-                      <tr key={s.enrollmentId} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-4 font-bold text-slate-800">{s.displayName}</td>
-                        <td className="py-3 px-4 font-mono text-slate-600">{s.username}</td>
-                        <td className="py-3 px-4 text-slate-500 text-xs">
-                          {new Date(s.enrolledAt).toLocaleDateString('ar-EG')}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-xs text-slate-500">
-                          {s.joinedViaCodeHint || 'تسجيل مباشر'}
+                    {students.map((st) => (
+                      <tr key={st.studentId} className="hover:bg-slate-50/50">
+                        <td className="p-3 font-semibold text-slate-800">{st.displayName}</td>
+                        <td className="p-3 font-mono text-slate-500">{st.username}</td>
+                        <td className="p-3 text-slate-400">
+                          {new Date(st.enrolledAt).toLocaleDateString('ar-EG')}
                         </td>
                       </tr>
                     ))}
@@ -824,4 +1112,134 @@ export default function TeacherCourseDetailPage() {
       </main>
     </div>
   );
+
+  function renderLessonCard(lesson: LessonDto, idx: number) {
+    return (
+      <Card key={lesson.id} className="border-slate-200 bg-white">
+        <CardHeader className="py-3 px-5 flex flex-row items-center justify-between border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs">
+              {idx + 1}
+            </span>
+            <div>
+              <CardTitle className="text-sm font-bold text-slate-800">{lesson.title}</CardTitle>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                <span>الترتيب: {lesson.orderIndex + 1}</span>
+                {lesson.sectionTitle && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
+                      {lesson.sectionTitle}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {lesson.isPublished ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  منشور للطلاب
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleArchiveLesson(lesson.id)}
+                  className="text-xs text-slate-500 hover:text-slate-700"
+                  title="إلغاء النشر"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePublishLesson(lesson.id)}
+                className="text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+              >
+                <Send className="w-3.5 h-3.5 ml-1" />
+                نشر الدرس
+              </Button>
+            )}
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleTriggerUpload(lesson.id)}
+              disabled={uploading}
+              className="text-xs"
+            >
+              <Upload className="w-3.5 h-3.5 ml-1" />
+              إرفاق ملف
+            </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleOpenEditLesson(lesson)}
+              className="text-slate-600 hover:bg-slate-100 text-xs p-1.5"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleDeleteLesson(lesson.id)}
+              className="text-rose-600 hover:bg-rose-50 text-xs p-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-4">
+          {lesson.content ? (
+            <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 text-sm">
+              <MarkdownContent content={lesson.content} />
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">لا يوجد محتوى نصي مضاف.</p>
+          )}
+
+          {/* Attached Files */}
+          {lesson.files && lesson.files.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                أوراق العمل والملفات المرفقة ({lesson.files.length}):
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {lesson.files.map((file: any) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white text-xs"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-medium truncate">{file.originalName}</span>
+                      <span className="text-slate-400 shrink-0">
+                        ({(file.byteSize / 1024 / 1024).toFixed(1)} MB)
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFile(lesson.id, file.id)}
+                      className="text-rose-500 hover:text-rose-700 p-1 h-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 }

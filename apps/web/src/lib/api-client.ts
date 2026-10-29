@@ -12,6 +12,10 @@ import {
   CreateLessonDto,
   UpdateLessonDto,
   ReorderLessonsDto,
+  SectionSummaryDto,
+  CreateSectionDto,
+  UpdateSectionDto,
+  ReorderSectionsDto,
   JoinCodeSummaryDto,
   CreateJoinCodeDto,
   JoinCodeCreatedDto,
@@ -145,6 +149,53 @@ export const apiClient = {
     return handleResponse<EnrolledStudentSummaryDto[]>(res);
   },
 
+  // --- Teacher Sections ---
+  async createSection(courseId: string, payload: CreateSectionDto): Promise<SectionSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/sections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<SectionSummaryDto>(res);
+  },
+
+  async getCourseSections(courseId: string): Promise<SectionSummaryDto[]> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/sections`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<SectionSummaryDto[]>(res);
+  },
+
+  async updateSection(sectionId: string, payload: UpdateSectionDto): Promise<SectionSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/sections/${sectionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<SectionSummaryDto>(res);
+  },
+
+  async deleteSection(sectionId: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/sections/${sectionId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
+  async reorderSections(courseId: string, payload: ReorderSectionsDto): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/sections/reorder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
   // --- Teacher Lessons ---
   async createLesson(courseId: string, payload: CreateLessonDto): Promise<LessonDto> {
     const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/lessons`, {
@@ -180,6 +231,14 @@ export const apiClient = {
       credentials: 'include',
     });
     return handleResponse<LessonDto>(res);
+  },
+
+  async deleteLesson(lessonId: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/lessons/${lessonId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return handleResponse<{ success: boolean; message: string }>(res);
   },
 
   async reorderLessons(courseId: string, payload: ReorderLessonsDto): Promise<{ message: string }> {

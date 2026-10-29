@@ -1,16 +1,19 @@
 import { CourseStatus } from './enums';
 import { LessonSummaryDto } from './lesson';
+import { SectionSummaryDto } from './section';
 
 export interface CreateCourseDto {
   title: string;
   description?: string;
   subject?: string;
+  gradeLevel?: string;
 }
 
 export interface UpdateCourseDto {
   title?: string;
   description?: string;
   subject?: string;
+  gradeLevel?: string;
 }
 
 export interface EnrolledStudentDto {
@@ -32,17 +35,20 @@ export interface CourseSummaryDto {
   title: string;
   description: string | null;
   subject: string | null;
+  gradeLevel?: string | null;
   status: CourseStatus;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   lessonsCount?: number;
+  sectionsCount?: number;
   enrolledStudentsCount?: number;
   enrolledCount?: number;
 }
 
 export interface CourseDetailsDto extends CourseSummaryDto {
   lessons: LessonSummaryDto[];
+  sections?: SectionSummaryDto[];
   enrolledStudents?: EnrolledStudentDto[];
 }
 
@@ -56,6 +62,7 @@ export interface StudentCourseSummaryDto {
   title: string;
   description: string | null;
   subject: string | null;
+  gradeLevel?: string | null;
   teacherName: string;
   enrolledAt: string;
   lessonsCount: number;

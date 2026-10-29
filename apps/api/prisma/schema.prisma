@@ -83,6 +83,9 @@ enum AuditAction {
   COURSE_ARCHIVED
   LESSON_CREATED
   LESSON_PUBLISHED
+  SECTION_CREATED
+  SECTION_UPDATED
+  SECTION_DELETED
   JOIN_CODE_GENERATED
   JOIN_CODE_REVOKED
   JOIN_CODE_REDEEMED
@@ -98,6 +101,7 @@ model Tenant {
   owner                 User                   @relation("TenantOwner", fields: [ownerId], references: [id])
   memberships           Membership[]
   courses               Course[]
+  sections              Section[]
   joinCodes             JoinCode[]
   enrollments           Enrollment[]
   lessons               Lesson[]
@@ -201,6 +205,7 @@ model Course {
   title        String
   description  String?
   subject      String?
+  gradeLevel   String?
   status       CourseStatus  @default(DRAFT)
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now()) @db.Timestamptz(6)
@@ -211,6 +216,7 @@ model Course {
   teacher      User          @relation("CourseTeacher", fields: [teacherId], references: [id])
   joinCodes    JoinCode[]
   enrollments  Enrollment[]
+  sections     Section[]
   lessons      Lesson[]
   assignments  Assignment[]
   exams        Exam[]
@@ -265,10 +271,30 @@ model Enrollment {
   @@index([studentId])
 }
 
+model Section {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  courseId    String    @db.Uuid
+  title       String
+  description String?
+  orderIndex  Int       @default(0)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  deletedAt   DateTime? @db.Timestamptz(6)
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
 model Lesson {
   id          String           @id @default(uuid()) @db.Uuid
   tenantId    String           @db.Uuid
   courseId    String           @db.Uuid
+  sectionId   String?          @db.Uuid
   title       String
   content     String?
   orderIndex  Int              @default(0)
@@ -279,11 +305,13 @@ model Lesson {
 
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section     Section?         @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   lessonFiles LessonFile[]
   progresses  LessonProgress[]
 
   @@index([tenantId])
   @@index([courseId])
+  @@index([sectionId])
 }
 
 model FileObject {

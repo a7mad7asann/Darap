@@ -113,7 +113,29 @@ export class FilesService {
     dto: CompleteUploadNestDto,
     userRole: UserRole,
   ) {
-    // 1. Verify object exists via storage provider
+    // 1. Strict validation of storage key namespace
+    const expectedPrefix = `tenants/${tenantId}/lessons/${lessonId}/`;
+    if (!dto.storageKey || !dto.storageKey.startsWith(expectedPrefix)) {
+      throw new BadRequestException('مسار تخزين الملف غير صالح أو لا يطابق سياق المقرر والدرس');
+    }
+
+    // 2. Validate MIME type, extension, and size
+    if (!ALLOWED_MIME_TYPES.has(dto.mimeType.toLowerCase())) {
+      throw new BadRequestException(
+        'نوع الملف غير مسموح به. يُسمح فقط بملفات PDF والمستندات والصور التعليمية.',
+      );
+    }
+
+    const ext = path.extname(dto.fileName).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      throw new BadRequestException('امتداد الملف غير صالح أو غير مصرح به');
+    }
+
+    if (dto.byteSize <= 0 || dto.byteSize > MAX_FILE_SIZE) {
+      throw new BadRequestException('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت)');
+    }
+
+    // 3. Verify object exists via storage provider
     const exists = await this.storage.verifyObjectExists(dto.storageKey, dto.uploadTicket);
 
     if (!exists) {
@@ -190,7 +212,8 @@ export class FilesService {
         throw new NotFoundException('الملف المطلوب غير موجود');
       }
 
-      const course = file.lessonFiles[0].lesson.course;
+      const lesson = file.lessonFiles[0].lesson;
+      const course = lesson.course;
 
       // Check student enrollment in the course
       const enrollment = await tx.enrollment.findFirst({
@@ -205,6 +228,13 @@ export class FilesService {
       if (!enrollment || course.deletedAt || course.status !== CourseStatus.PUBLISHED) {
         throw new ForbiddenException(
           'غير مصرح لك بتحميل هذا الملف: لست مسجلاً في المقرر التابع له الملف',
+        );
+      }
+
+      // Check that the lesson itself is published and active
+      if (lesson.deletedAt || !lesson.isPublished) {
+        throw new ForbiddenException(
+          'غير مصرح لك بتحميل هذا الملف: الدرس المرتبط بالملف لم يتم نشره بعد',
         );
       }
 

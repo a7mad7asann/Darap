@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { CourseStatus, AuditAction, UserRole } from '@darb/contracts';
 import { PrismaService } from '../../database/prisma.service';
+import { ContentSanitizer } from '../../common/utils/content-sanitizer';
 import { CreateCourseNestDto } from './dto/create-course.dto';
 import { UpdateCourseNestDto } from './dto/update-course.dto';
 
@@ -29,6 +30,7 @@ export class CoursesService {
           _count: {
             select: {
               lessons: { where: { deletedAt: null } },
+              sections: { where: { deletedAt: null } },
               enrollments: { where: { deletedAt: null, status: 'ACTIVE' } },
             },
           },
@@ -50,11 +52,13 @@ export class CoursesService {
         title: c.title,
         description: c.description,
         subject: c.subject,
+        gradeLevel: c.gradeLevel,
         status: c.status as CourseStatus,
         isActive: c.isActive,
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
         lessonsCount: c._count.lessons,
+        sectionsCount: c._count.sections,
         enrolledCount: c._count.enrollments,
       }));
     });
@@ -79,10 +83,20 @@ export class CoursesService {
               username: true,
             },
           },
+          sections: {
+            where: { deletedAt: null },
+            orderBy: { orderIndex: 'asc' },
+          },
           lessons: {
             where: { deletedAt: null },
             orderBy: { orderIndex: 'asc' },
             include: {
+              section: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
               lessonFiles: {
                 include: {
                   file: true,
@@ -122,13 +136,25 @@ export class CoursesService {
         title: course.title,
         description: course.description,
         subject: course.subject,
+        gradeLevel: course.gradeLevel,
         status: course.status as CourseStatus,
         isActive: course.isActive,
         createdAt: course.createdAt.toISOString(),
         updatedAt: course.updatedAt.toISOString(),
+        sections: course.sections.map((s) => ({
+          id: s.id,
+          courseId: s.courseId,
+          title: s.title,
+          description: s.description,
+          orderIndex: s.orderIndex,
+          createdAt: s.createdAt.toISOString(),
+          updatedAt: s.updatedAt.toISOString(),
+        })),
         lessons: course.lessons.map((l) => ({
           id: l.id,
           courseId: l.courseId,
+          sectionId: l.sectionId,
+          sectionTitle: l.section?.title || null,
           title: l.title,
           content: l.content,
           orderIndex: l.orderIndex,
@@ -155,13 +181,19 @@ export class CoursesService {
 
   async createCourse(tenantId: string, teacherId: string, dto: CreateCourseNestDto) {
     return this.prisma.withTenant(tenantId, async (tx) => {
+      const sanitizedTitle = ContentSanitizer.sanitize(dto.title.trim());
+      const sanitizedDescription = dto.description
+        ? ContentSanitizer.sanitize(dto.description.trim())
+        : null;
+
       const course = await tx.course.create({
         data: {
           tenantId,
           teacherId,
-          title: dto.title.trim(),
-          description: dto.description?.trim() || null,
+          title: sanitizedTitle,
+          description: sanitizedDescription,
           subject: dto.subject?.trim() || null,
+          gradeLevel: dto.gradeLevel?.trim() || null,
           status: CourseStatus.DRAFT,
           isActive: true,
         },
@@ -185,6 +217,7 @@ export class CoursesService {
         title: course.title,
         description: course.description,
         subject: course.subject,
+        gradeLevel: course.gradeLevel,
         status: course.status as CourseStatus,
         isActive: course.isActive,
         createdAt: course.createdAt.toISOString(),
@@ -217,12 +250,22 @@ export class CoursesService {
         throw new BadRequestException('لا يمكن تعديل مقرر مؤرشف');
       }
 
+      const sanitizedTitle =
+        dto.title !== undefined ? ContentSanitizer.sanitize(dto.title.trim()) : undefined;
+      const sanitizedDescription =
+        dto.description !== undefined
+          ? dto.description
+            ? ContentSanitizer.sanitize(dto.description.trim())
+            : null
+          : undefined;
+
       const updated = await tx.course.update({
         where: { id: courseId },
         data: {
-          title: dto.title !== undefined ? dto.title.trim() : undefined,
-          description: dto.description !== undefined ? dto.description?.trim() || null : undefined,
+          title: sanitizedTitle,
+          description: sanitizedDescription,
           subject: dto.subject !== undefined ? dto.subject?.trim() || null : undefined,
+          gradeLevel: dto.gradeLevel !== undefined ? dto.gradeLevel?.trim() || null : undefined,
         },
       });
 
@@ -244,6 +287,7 @@ export class CoursesService {
         title: updated.title,
         description: updated.description,
         subject: updated.subject,
+        gradeLevel: updated.gradeLevel,
         status: updated.status as CourseStatus,
         isActive: updated.isActive,
         createdAt: updated.createdAt.toISOString(),

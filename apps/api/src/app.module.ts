@@ -6,6 +6,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { SectionsModule } from './modules/sections/sections.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
 import { JoinCodesModule } from './modules/join-codes/join-codes.module';
 import { FilesModule } from './modules/files/files.module';
@@ -24,6 +25,7 @@ import { AdminModule } from './modules/admin/admin.module';
     AuthModule,
     TenantsModule,
     CoursesModule,
+    SectionsModule,
     LessonsModule,
     JoinCodesModule,
     FilesModule,

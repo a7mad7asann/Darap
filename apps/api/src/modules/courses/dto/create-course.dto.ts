@@ -31,4 +31,14 @@ export class CreateCourseNestDto implements CreateCourseDto {
   @IsOptional()
   @Length(0, 50)
   subject?: string;
+
+  @ApiProperty({
+    description: 'Target educational grade level',
+    example: 'الصف الأول الثانوي',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @Length(0, 80)
+  gradeLevel?: string;
 }

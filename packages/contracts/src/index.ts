@@ -5,4 +5,5 @@ export * from './course';
 export * from './lesson';
 export * from './join-code';
 export * from './file';
+export * from './section';
 export * from './admin';

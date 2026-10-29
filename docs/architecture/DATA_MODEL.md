@@ -76,7 +76,9 @@ erDiagram
 
 ### 2.2 Courses & Enrollment
 - **`Course`**: Belongs to exactly one `Tenant` (`tenantId`). Taught by a teacher (`teacherId`).
+  - `gradeLevel`: Optional academic grade level string (e.g., "الصف الأول الثانوي").
   - `status`: Enum `CourseStatus` (`DRAFT`, `PUBLISHED`, `ARCHIVED`). Only `PUBLISHED` courses are accessible to students.
+- **`Section`**: Educational unit or module within a course. Belongs to a `Tenant` and a `Course`. Has `orderIndex` and `description`. Protected by PostgreSQL Row-Level Security (`section_tenant_isolation`). Deletion detaches child lessons safely without data loss.
 - **`JoinCode`**: Teacher-generated access token to enroll in a course.
   - `codeHash` is a unique SHA-256 hash. The plaintext code is never stored.
   - `codeHint` (e.g. `DARB-****-****-A1B2`) allows display without exposing the secret.
@@ -84,8 +86,8 @@ erDiagram
 - **`Enrollment`**: Associates a student with a course. Unique constraint on `[courseId, studentId]`, preventing duplicate active enrollments.
 
 ### 2.3 Content & Storage
-- **`Lesson`**: Educational module in a course with ordering (`orderIndex`) and draft/published state (`isPublished`).
-- **`FileObject`**: Metadata record for files stored in S3/R2. Tracks `storageKey`, `byteSize`, `mimeType`, and `isPublic`.
+- **`Lesson`**: Educational module in a course with ordering (`orderIndex`), optional unit assignment (`sectionId`), and draft/published state (`isPublished`).
+- **`FileObject`**: Metadata record for files stored in S3/R2. Tracks `storageKey`, `byteSize`, `mimeType`, and `isPublic`. Storage key prefix is strictly verified server-side (`tenants/${tenantId}/lessons/${lessonId}/`). Download requires active student enrollment AND a published parent lesson.
 - **`LessonFile`**: Join table attaching a `FileObject` to a `Lesson`. Unique on `[lessonId, fileId]`.
 - **`LessonProgress`**: Tracks student completion of a lesson. Unique on `[lessonId, studentId]`.
 
@@ -128,6 +130,7 @@ erDiagram
 | `20261029095117_add_course_status` | `add_course_status` | Added `CourseStatus` enum (`DRAFT`, `PUBLISHED`, `ARCHIVED`) and `status` column to `Course`. |
 | `20261029095835_add_audit_actions` | `add_audit_actions` | Added course, lesson, and join code actions to `AuditAction` enum (`COURSE_UPDATED`, `COURSE_PUBLISHED`, `COURSE_ARCHIVED`, `LESSON_CREATED`, `LESSON_PUBLISHED`, `JOIN_CODE_REVOKED`). |
 | `20261029100504_rls_bypass_support` | `rls_bypass_support` | Updated all RLS policies across 15 tenant-owned tables to support transaction-scoped bypass (`SET LOCAL app.bypass_rls = 'on'`) for trusted administrative and cross-tenant join-code redemption. |
+| `20261029112020_add_sections_and_grade_level` | `add_sections_and_grade_level` | Added `Section` table with forced RLS policy `section_tenant_isolation`, `sectionId` relation on `Lesson`, `gradeLevel` column on `Course`, and `SECTION_CREATED`/`SECTION_UPDATED`/`SECTION_DELETED` audit actions. |
 
 ---
 

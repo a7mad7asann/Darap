@@ -29,4 +29,12 @@ export class CreateLessonNestDto implements CreateLessonDto {
   @Min(0)
   @IsOptional()
   orderIndex?: number;
+
+  @ApiProperty({
+    description: 'Optional Section/Unit ID this lesson belongs to',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  sectionId?: string | null;
 }

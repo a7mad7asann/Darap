@@ -76,6 +76,7 @@ export class LearningService {
       title: e.course.title,
       description: e.course.description,
       subject: e.course.subject,
+      gradeLevel: e.course.gradeLevel,
       teacherName: e.course.teacher.displayName,
       enrolledAt: e.enrolledAt.toISOString(),
       lessonsCount: e.course._count.lessons,
@@ -94,6 +95,10 @@ export class LearningService {
         tenant: {
           select: { name: true, slug: true },
         },
+        sections: {
+          where: { deletedAt: null },
+          orderBy: { orderIndex: 'asc' },
+        },
       },
     });
 
@@ -106,9 +111,16 @@ export class LearningService {
       title: course.title,
       description: course.description,
       subject: course.subject,
+      gradeLevel: course.gradeLevel,
       teacherName: course.teacher.displayName,
       academyName: course.tenant.name,
       enrolledAt: enrollment.enrolledAt.toISOString(),
+      sections: course.sections.map((s) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        orderIndex: s.orderIndex,
+      })),
     };
   }
 
@@ -125,6 +137,13 @@ export class LearningService {
         },
         orderBy: { orderIndex: 'asc' },
         include: {
+          section: {
+            select: {
+              id: true,
+              title: true,
+              orderIndex: true,
+            },
+          },
           lessonFiles: {
             include: {
               file: true,
@@ -141,6 +160,8 @@ export class LearningService {
       return lessons.map((l) => ({
         id: l.id,
         courseId: l.courseId,
+        sectionId: l.sectionId,
+        sectionTitle: l.section?.title || null,
         title: l.title,
         content: l.content,
         orderIndex: l.orderIndex,

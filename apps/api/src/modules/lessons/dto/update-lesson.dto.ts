@@ -28,4 +28,12 @@ export class UpdateLessonNestDto implements UpdateLessonDto {
   @Min(0)
   @IsOptional()
   orderIndex?: number;
+
+  @ApiProperty({
+    description: 'Updated Section/Unit ID this lesson belongs to (null to detach)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  sectionId?: string | null;
 }

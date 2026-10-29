@@ -4,6 +4,43 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-10-29 — Phase 3 — P3-001 through P3-011: Course Expansion, Worksheets & Rich Content
+
+### Summary
+- Implemented Phase 3: Course Expansion, Worksheets & Rich Content on top of the DARB MVP monorepo.
+- Extended domain model with `Section` entity (units/sections) and `gradeLevel` metadata on `Course`.
+- Applied PostgreSQL Row-Level Security migration `20261029112020_add_sections_and_grade_level` with RLS enabled and forced (`section_tenant_isolation`) and audit actions (`SECTION_CREATED`, `SECTION_UPDATED`, `SECTION_DELETED`).
+- Built complete Section Management module (`/api/v1/teacher/courses/:id/sections`, `/api/v1/teacher/sections/:id`, reordering) with automatic order indexing and tenant ownership verification.
+- Implemented safe section deletion preserving child lessons: deleting a section detaches lessons safely (`sectionId = null`) without data loss.
+- Engineered server-side `ContentSanitizer` utility: strips stored/reflected XSS vectors (`<script>`, inline `on*` event handlers, `javascript:` and dangerous URI protocols) from courses, sections, and lessons while preserving Arabic typography, Markdown structures, and valid external links.
+- Hardened private file storage upload completion: strictly validates storage key namespace prefix (`tenants/${tenantId}/lessons/${lessonId}/`), verifies allowed MIME types and extensions, and enforces 25MB limits.
+- Hardened file download security: strictly denies student downloads for files attached to unpublished/draft lessons (returns 403 Forbidden).
+- Implemented Sectioned Curriculum Student Navigation: returns section hierarchy, lesson section titles, and completion state.
+- Developed Rich Markdown Editor (`RichEditor`) for teachers with formatting toolbar (Bold, Italic, H1/H2/H3, Lists, Blockquotes, Code, Links) and a Live RTL Preview tab.
+- Developed safe client-side Arabic RTL Markdown Renderer (`MarkdownContent`) without `dangerouslySetInnerHTML`.
+- Updated Student Learning view (`/student/courses/[courseId]`) with structured unit accordions, rich markdown lesson reader, worksheet download badges with file sizes, and Previous/Next lesson navigation buttons.
+- Automated E2E verification: created `phase3-course-expansion.e2e-spec.ts` with 17 tests verifying section CRUD, RLS isolation, XSS sanitization, upload verification, draft file download denial, and section deletion safety. Total passing E2E tests: 55.
+
+### Files Changed
+- `apps/api/prisma/schema.prisma` — Added `Section` model, `sectionId` relation on `Lesson`, `gradeLevel` on `Course`, new `AuditAction` enum values.
+- `apps/api/prisma/migrations/20261029112020_add_sections_and_grade_level/migration.sql` — Applied migration with RLS policy.
+- `packages/contracts/src/section.ts`, `enums.ts`, `course.ts`, `lesson.ts`, `index.ts` — Added section contracts and updated course/lesson DTOs.
+- `apps/api/src/common/utils/content-sanitizer.ts`, `content-sanitizer.spec.ts` — Server-side XSS sanitizer with unit test suite.
+- `apps/api/src/modules/sections/*` — `SectionsModule`, `SectionsService`, `TeacherSectionsController`, DTOs.
+- `apps/api/src/modules/courses/courses.service.ts` — Included `gradeLevel`, sections list, and sanitization.
+- `apps/api/src/modules/lessons/lessons.service.ts`, `teacher-lessons.controller.ts` — Added `sectionId`, sanitization, and soft-delete endpoint.
+- `apps/api/src/modules/files/files.service.ts` — Hardened upload key prefix validation and unpublished lesson download block.
+- `apps/api/src/modules/learning/learning.service.ts`, `student.controller.ts` — Section curriculum grouping, gradeLevel, and presigned download.
+- `apps/web/src/lib/api-client.ts` — Added section API methods and lesson deletion.
+- `apps/web/src/components/ui/markdown-content.tsx` — Safe Arabic RTL markdown renderer component.
+- `apps/web/src/components/ui/rich-editor.tsx` — Rich markdown editor with toolbar and live preview tab.
+- `apps/web/src/app/(teacher)/teacher/courses/[courseId]/page.tsx` — Teacher curriculum units, lesson grouping, rich editor, and worksheets.
+- `apps/web/src/app/(student)/student/courses/[courseId]/page.tsx` — Student sectioned navigation, reader, worksheets, next/previous buttons.
+- `apps/api/test/phase3-course-expansion.e2e-spec.ts` — Automated 17-test Phase 3 E2E test suite.
+- `PROJECT_MEMORY.md`, `CHANGELOG.md`, `TASKS.md` — Updated project memory and task ledger.
+
+---
+
 ## 2026-10-29 — Phase 2 — P2-001 through P2-011: Course Management, Join Codes, Student Learning & Admin Provisioning
 
 ### Summary

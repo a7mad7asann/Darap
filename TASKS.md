@@ -129,7 +129,74 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 3 — Course Expansion, Worksheets & Rich Content
-*(Deferred to Phase 3)*
+
+- [x] **P3-001 — Course Metadata & Grade Level Enhancement**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-011
+  - **Acceptance**: Added `gradeLevel` to `Course` model, contracts DTOs, API validation, and UI filters/badges.
+  - **File Paths**: `apps/api/prisma/schema.prisma`, `packages/contracts/src/course.ts`, `apps/api/src/modules/courses/*`
+
+- [x] **P3-002 — Section Domain Entity, Prisma Migration & PostgreSQL RLS Isolation**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-001
+  - **Acceptance**: `Section` entity added with foreign keys to Tenant and Course; PostgreSQL RLS enabled and forced (`section_tenant_isolation`); database migration `20261029112020_add_sections_and_grade_level` applied cleanly.
+  - **File Paths**: `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/20261029112020_add_sections_and_grade_level/*`
+
+- [x] **P3-003 — Backend Sections Module, CRUD & Reordering Endpoints**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-002
+  - **Acceptance**: Full section lifecycle endpoints under `/api/v1/teacher` (`POST courses/:id/sections`, `GET courses/:id/sections`, `PATCH sections/:id`, `DELETE sections/:id`, `POST courses/:id/sections/reorder`); strictly scoped by tenant RLS and verified teacher course ownership.
+  - **File Paths**: `apps/api/src/modules/sections/*`, `packages/contracts/src/section.ts`
+
+- [x] **P3-004 — Server-Side Content Sanitization & Stored XSS Neutralization**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-003
+  - **Acceptance**: Dedicated `ContentSanitizer` service stripping scripts, embeds, `on*` event handlers, and `javascript:` URIs from course, section, and lesson titles/contents while safely preserving Arabic text, markdown syntax, and valid links.
+  - **File Paths**: `apps/api/src/common/utils/content-sanitizer.ts`, `apps/api/src/common/utils/content-sanitizer.spec.ts`
+
+- [x] **P3-005 — Hardened Object Storage Namespace Verification & Attachment Integrity**
+  - **Status**: `TESTED`
+  - **Dependencies**: P2-006
+  - **Acceptance**: Upload completion validates storage key namespace prefix (`tenants/${tenantId}/lessons/${lessonId}/`), verifies allowed MIME types and file extensions, checks 25MB limits, and ensures existence in private storage.
+  - **File Paths**: `apps/api/src/modules/files/files.service.ts`
+
+- [x] **P3-006 — Strict Download Authorization & Unpublished Lesson Denial**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-005
+  - **Acceptance**: Enforces that students can only download files if enrolled, the course is published, and the lesson itself is published and not deleted (`isPublished === true`). Draft lesson files are strictly denied with 403 Forbidden.
+  - **File Paths**: `apps/api/src/modules/files/files.service.ts`
+
+- [x] **P3-007 — Safe Section Deletion & Child Lesson Preservation**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-003
+  - **Acceptance**: Deleting a section soft-deletes the section entity and safely detaches child lessons by setting `sectionId = null`, preventing orphan records or accidental content loss.
+  - **File Paths**: `apps/api/src/modules/sections/sections.service.ts`
+
+- [x] **P3-008 — Student Learning Navigation by Sections & Progress Tracking**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-003, P3-006
+  - **Acceptance**: Student learning endpoints return section hierarchy, lesson section titles, and lesson completion status; next/previous lesson transitions verified.
+  - **File Paths**: `apps/api/src/modules/learning/learning.service.ts`, `apps/api/src/modules/learning/student.controller.ts`
+
+- [x] **P3-009 — Teacher RTL Structured Course & Markdown Live Preview UI**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-003, P3-004
+  - **Acceptance**: Teacher course page displays curriculum units, unsectioned lessons, section modals, lesson assignment to sections, formatting toolbar, and live Arabic RTL preview.
+  - **File Paths**: `apps/web/src/app/(teacher)/teacher/courses/[courseId]/page.tsx`, `apps/web/src/components/ui/rich-editor.tsx`
+
+- [x] **P3-010 — Student RTL Sectioned Curriculum & Markdown Reader UI**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-008
+  - **Acceptance**: Student learning interface features structured unit accordions, safe client-side markdown rendering, worksheet downloads with size badges, and lesson navigation controls.
+  - **File Paths**: `apps/web/src/app/(student)/student/courses/[courseId]/page.tsx`, `apps/web/src/components/ui/markdown-content.tsx`
+
+- [x] **P3-011 — Comprehensive Automated Security, Concurrency & Regression Tests**
+  - **Status**: `TESTED`
+  - **Dependencies**: P3-001 through P3-010
+  - **Acceptance**: 17 automated E2E tests validating Section CRUD, RLS isolation, XSS sanitization, upload verification, draft file download denial, and section deletion lesson safety. All 55 system E2E tests passing.
+  - **File Paths**: `apps/api/test/phase3-course-expansion.e2e-spec.ts`
+
+---
 
 ## Phase 4 — Assignments & Grading
 *(Deferred to Phase 4)*

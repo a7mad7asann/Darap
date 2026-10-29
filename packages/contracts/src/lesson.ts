@@ -4,21 +4,26 @@ export interface CreateLessonDto {
   title: string;
   content?: string;
   orderIndex?: number;
+  sectionId?: string | null;
 }
 
 export interface UpdateLessonDto {
   title?: string;
   content?: string;
   orderIndex?: number;
+  sectionId?: string | null;
 }
 
 export interface ReorderLessonsDto {
   lessonIds: string[];
+  sectionId?: string | null;
 }
 
 export interface LessonSummaryDto {
   id: string;
   courseId: string;
+  sectionId?: string | null;
+  sectionTitle?: string | null;
   title: string;
   content: string | null;
   orderIndex: number;
@@ -27,6 +32,7 @@ export interface LessonSummaryDto {
   updatedAt: string;
   files: FileSummaryDto[];
   isCompleted?: boolean;
+  completedAt?: string | null;
 }
 
 export type LessonDto = LessonSummaryDto;

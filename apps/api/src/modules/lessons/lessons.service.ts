@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditAction, UserRole } from '@darb/contracts';
 import { PrismaService } from '../../database/prisma.service';
+import { ContentSanitizer } from '../../common/utils/content-sanitizer';
 import { CreateLessonNestDto } from './dto/create-lesson.dto';
 import { UpdateLessonNestDto } from './dto/update-lesson.dto';
 import { ReorderLessonsNestDto } from './dto/reorder-lesson.dto';
@@ -29,6 +30,15 @@ export class LessonsService {
         throw new ForbiddenException('غير مصرح لك بإضافة دروس إلى هذا المقرر');
       }
 
+      if (dto.sectionId) {
+        const section = await tx.section.findFirst({
+          where: { id: dto.sectionId, courseId, deletedAt: null },
+        });
+        if (!section) {
+          throw new NotFoundException('القسم المحدد غير موجود في هذا المقرر');
+        }
+      }
+
       let order = dto.orderIndex;
       if (order === undefined || order === null) {
         const lastLesson = await tx.lesson.findFirst({
@@ -38,14 +48,21 @@ export class LessonsService {
         order = lastLesson ? lastLesson.orderIndex + 1 : 0;
       }
 
+      const sanitizedTitle = ContentSanitizer.sanitize(dto.title.trim());
+      const sanitizedContent = dto.content ? ContentSanitizer.sanitize(dto.content.trim()) : null;
+
       const lesson = await tx.lesson.create({
         data: {
           tenantId,
           courseId,
-          title: dto.title.trim(),
-          content: dto.content?.trim() || null,
+          sectionId: dto.sectionId || null,
+          title: sanitizedTitle,
+          content: sanitizedContent,
           orderIndex: order,
           isPublished: false,
+        },
+        include: {
+          section: true,
         },
       });
 
@@ -56,13 +73,15 @@ export class LessonsService {
           action: AuditAction.LESSON_CREATED,
           resourceType: 'Lesson',
           resourceId: lesson.id,
-          details: { title: lesson.title, courseId },
+          details: { title: lesson.title, courseId, sectionId: lesson.sectionId },
         },
       });
 
       return {
         id: lesson.id,
         courseId: lesson.courseId,
+        sectionId: lesson.sectionId,
+        sectionTitle: lesson.section?.title || null,
         title: lesson.title,
         content: lesson.content,
         orderIndex: lesson.orderIndex,
@@ -95,18 +114,38 @@ export class LessonsService {
         throw new ForbiddenException('غير مصرح لك بتعديل هذا الدرس');
       }
 
+      if (dto.sectionId !== undefined && dto.sectionId !== null) {
+        const section = await tx.section.findFirst({
+          where: { id: dto.sectionId, courseId: lesson.courseId, deletedAt: null },
+        });
+        if (!section) {
+          throw new NotFoundException('القسم المحدد غير موجود في هذا المقرر');
+        }
+      }
+
       const updated = await tx.lesson.update({
         where: { id: lessonId },
         data: {
-          title: dto.title !== undefined ? dto.title.trim() : undefined,
-          content: dto.content !== undefined ? dto.content?.trim() || null : undefined,
+          title: dto.title !== undefined ? ContentSanitizer.sanitize(dto.title.trim()) : undefined,
+          content:
+            dto.content !== undefined
+              ? dto.content
+                ? ContentSanitizer.sanitize(dto.content.trim())
+                : null
+              : undefined,
           orderIndex: dto.orderIndex !== undefined ? dto.orderIndex : undefined,
+          sectionId: dto.sectionId !== undefined ? dto.sectionId : undefined,
+        },
+        include: {
+          section: true,
         },
       });
 
       return {
         id: updated.id,
         courseId: updated.courseId,
+        sectionId: updated.sectionId,
+        sectionTitle: updated.section?.title || null,
         title: updated.title,
         content: updated.content,
         orderIndex: updated.orderIndex,
@@ -225,6 +264,34 @@ export class LessonsService {
         title: l.title,
         orderIndex: l.orderIndex,
       }));
+    });
+  }
+
+  async deleteLesson(tenantId: string, teacherId: string, lessonId: string, userRole: UserRole) {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const lesson = await tx.lesson.findFirst({
+        where: { id: lessonId, deletedAt: null },
+        include: { course: true },
+      });
+
+      if (!lesson) {
+        throw new NotFoundException('الدرس غير موجود');
+      }
+
+      if (userRole !== UserRole.ADMIN && lesson.course.teacherId !== teacherId) {
+        throw new ForbiddenException('غير مصرح لك بحذف هذا الدرس');
+      }
+
+      await tx.lesson.update({
+        where: { id: lessonId },
+        data: { deletedAt: new Date() },
+      });
+
+      return {
+        id: lesson.id,
+        success: true,
+        message: 'تم حذف الدرس بنجاح',
+      };
     });
   }
 }

@@ -83,10 +83,22 @@ export class StudentController {
     return this.learningService.markLessonProgress(user.id, lessonId, true);
   }
 
+  @Get('files/:fileObjectId/presign-download')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request a time-limited presigned download URL for a lesson attachment (GET)',
+  })
+  async presignDownloadGet(
+    @CurrentUser() user: UserSummaryDto,
+    @Param('fileObjectId', ParseUUIDPipe) fileObjectId: string,
+  ) {
+    return this.filesService.presignStudentDownload(user.id, fileObjectId);
+  }
+
   @Post('files/:fileObjectId/presign-download')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Request a time-limited presigned download URL for a lesson attachment',
+    summary: 'Request a time-limited presigned download URL for a lesson attachment (POST)',
   })
   async presignDownload(
     @CurrentUser() user: UserSummaryDto,

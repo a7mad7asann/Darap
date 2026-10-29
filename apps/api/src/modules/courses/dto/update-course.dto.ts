@@ -30,4 +30,13 @@ export class UpdateCourseNestDto implements UpdateCourseDto {
   @IsOptional()
   @Length(0, 50)
   subject?: string;
+
+  @ApiProperty({
+    description: 'Updated grade level',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @Length(0, 80)
+  gradeLevel?: string;
 }
