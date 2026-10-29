@@ -4,6 +4,34 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-10-29 — Phase 6 — P6-001: Production Configuration & Deployment Readiness Audit
+
+### Summary
+- Audited and hardened production configuration, environment validation, container security, and deployment readiness across the DARB monorepo.
+- **Production Startup Security Invariants (`env.validation.ts`)**:
+  - Implemented strict production validation in `validateEnv`:
+    - Enforced `COOKIE_SECURE === true` when `NODE_ENV === 'production'`.
+    - Prohibited known insecure development placeholder secrets (`change-this`, `super-secret-key`, `placeholder`, etc.) in production.
+    - Prohibited default development database credentials (`postgres:postgres@`, `postgres:postgrespassword@`) in production.
+  - Added support for `CORS_ALLOWED_ORIGINS` and `ENABLE_SWAGGER` environment variables.
+- **Production CORS & Swagger Controls (`main.ts`)**:
+  - Eliminated unconditional inclusion of `http://localhost:3000` in production CORS allowed origins list.
+  - Dynamically builds trusted origin allowlist from `NEXT_PUBLIC_APP_URL` and `CORS_ALLOWED_ORIGINS`.
+  - Configured Swagger / OpenAPI documentation to mount only when enabled (`ENABLE_SWAGGER=true`), defaulting to disabled in production.
+- **Secure Cookie Invalidation (`auth.controller.ts`)**:
+  - Updated `res.clearCookie` on logout to include `secure` and `sameSite` flags matching original cookie attributes, guaranteeing reliable cookie destruction in HTTPS browsers.
+- **Container & Deployment Security**:
+  - Created root `.dockerignore` preventing local `.env` secrets, `.git`, `node_modules`, and build artifacts from leaking into Docker build contexts or layers.
+  - Hardened `infra/Dockerfile.api` and `infra/Dockerfile.web` with non-root user execution (`USER node`) and built-in container healthchecks.
+  - Added healthcheck to API service in `infra/docker-compose.yml` and enforced service readiness dependency for Web (`condition: service_healthy`).
+  - Updated `.env.example` with clear sections, production guidelines, and unmistakable placeholders.
+- **Automated Verification**:
+  - Added 6 unit tests in `apps/api/src/config/env.validation.spec.ts` testing all production security invariants.
+  - All 128 tests passing (103 E2E, 25 unit), 0 TypeScript errors, 0 ESLint warnings.
+  - Confirmed P6-002 through P6-006 remain `NOT_STARTED`.
+
+---
+
 ## 2026-10-29 — Pre-Phase-6 Audit, Bug Fixes & Sessions Verification
 
 ### Summary

@@ -97,9 +97,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const cookieName = this.configService.get<string>('COOKIE_NAME') || 'darb_session';
+    const cookieSecure = this.configService.get<boolean>('COOKIE_SECURE') ?? false;
+    const cookieSameSite =
+      (this.configService.get<string>('COOKIE_SAME_SITE') as 'lax' | 'strict' | 'none') || 'lax';
 
     res.clearCookie(cookieName, {
       httpOnly: true,
+      secure: cookieSecure,
+      sameSite: cookieSameSite,
       path: '/',
     });
 

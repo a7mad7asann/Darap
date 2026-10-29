@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Pre-Phase-6 Audit & Verification (Phase 6 strictly ON HOLD / NOT_STARTED).
-- **Current Status**: **AUDIT & BUG FIXES VERIFIED**. Course management roster route implemented and tested; Sessions architecture audited end-to-end; Phase 6 on hold per project instructions.
+- **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (P6-001 completed; P6-002 through P6-006 NOT_STARTED).
+- **Current Status**: **P6-001 TESTED & VERIFIED**. Production configuration audit complete; strict startup environment validation in place; CORS and Swagger hardened for production; container non-root execution and .dockerignore configured.
 
 ---
 
@@ -63,16 +63,17 @@ This document serves as the single source of truth for the project state, verifi
 | **Frontend Arabic RTL Application** | `TESTED` | `apps/web/src/app/*`, `apps/web/src/components/ui/*` | Cairo font, full RTL (`dir="rtl"`), responsive dashboards for Teacher, Student, and Admin, structured course curriculum manager, live markdown preview, section accordions, and lesson reader. | None. | `layout.test.tsx`, `next build` (all 8 static/dynamic routes) — ALL PASS |
 | **Assignments & Grading** | `TESTED` | `apps/api/src/modules/assignments/*`, `teacher-assignments-tab.tsx`, `student-assignments-view.tsx` | Assignment creation, draft/published/closed lifecycle, due dates, text and attachment submissions, 25MB limits, unique student constraint, server-side late detection, manual teacher grading, atomic `GradeRecord` sync, grade release policy. | None. | `phase4-assignments-and-grading.e2e-spec.ts` (22 tests) — ALL PASS |
 | **Exams & Auto-Grading** | `TESTED` | `apps/api/src/modules/exams/*`, `teacher-exams-tab.tsx`, `student-exams-view.tsx` | Multiple-choice exam creation, questions with single correct answer, server-enforced countdown timer, `isCorrect` stripped from student payload, real-time incremental answer saving, auto-grading engine, GradeRecord synchronization with best score retention, post-submission review. | None. | `phase5-exams-and-auto-grading.e2e-spec.ts` (20 tests) — ALL PASS |
+| **Production Configuration & Deployment Readiness (P6-001)** | `TESTED` | `env.validation.ts`, `main.ts`, `.dockerignore`, `Dockerfile.api`, `Dockerfile.web`, `docker-compose.yml` | Strict production startup validation (rejecting insecure secrets, default DB credentials, missing HTTPS cookie flag); production CORS hardening (removing hardcoded localhost); toggleable Swagger (`ENABLE_SWAGGER`); secure cookie invalidation; container non-root execution (`USER node`) and built-in healthchecks; root `.dockerignore`. | P6-002 through P6-006 (pending). | `env.validation.spec.ts` (10 tests), all 128 monorepo tests — ALL PASS |
 
 ---
 
 ## D. Current Position
 
-- **Last Completed Phase**: Phase 5 — Multiple-Choice Exams & Automatic Grading (`COMPLETED`).
-- **Current Phase**: Phase 5 (`COMPLETED`). Ready to start Phase 6 (Pilot Readiness & Production Hardening).
-- **Last Completed Task**: P5-004 — Comprehensive Automated Security, Concurrency & Regression Tests.
-- **Current Task**: Completed Phase 5 implementation, tests, and documentation.
-- **Next Recommended Task**: Phase 6 kickoff (Pilot Readiness & Production Hardening).
+- **Last Completed Phase**: Pre-Phase-6 Audit & Bug Fixes (`COMPLETED`).
+- **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (`IN_PROGRESS`).
+- **Last Completed Task**: P6-001 — Production Configuration & Deployment Readiness Audit (`TESTED`).
+- **Current Task**: Completed P6-001 configuration audit, safeguards, container hardening, and verification.
+- **Next Recommended Task**: P6-002 — Pilot Workflow Acceptance Suite (2 teachers, 5 students end-to-end journey).
 - **Blocking Issues**: None.
 - **Decisions Requiring Approval**: None.
 

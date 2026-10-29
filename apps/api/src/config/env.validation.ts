@@ -10,11 +10,22 @@ import {
   validateSync,
 } from 'class-validator';
 
-enum Environment {
+export enum Environment {
   Development = 'development',
   Production = 'production',
   Test = 'test',
 }
+
+export const INSECURE_SECRET_PATTERNS = [
+  'change-this',
+  'super-secret-key',
+  'development-secret',
+  'placeholder',
+  'secret-key',
+  'darb_secret',
+  'default_secret',
+  '123456',
+];
 
 export class EnvironmentVariables {
   @IsEnum(Environment)
@@ -58,6 +69,18 @@ export class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   RATE_LIMIT_MAX_ATTEMPTS: number = 5;
+
+  @IsString()
+  @IsOptional()
+  NEXT_PUBLIC_APP_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  CORS_ALLOWED_ORIGINS?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  ENABLE_SWAGGER?: boolean;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -74,6 +97,37 @@ export function validateEnv(config: Record<string, unknown>) {
       .map((e) => Object.values(e.constraints ?? {}).join(', '))
       .join('; ');
     throw new Error(`Environment variable validation failed: ${errorDetails}`);
+  }
+
+  // Production-specific strict security invariants
+  if (validatedConfig.NODE_ENV === Environment.Production) {
+    // 1. In production, COOKIE_SECURE MUST be true to prevent plaintext cookie transmission
+    if (validatedConfig.COOKIE_SECURE !== true) {
+      throw new Error(
+        'Production security violation: COOKIE_SECURE must be set to true in production mode.',
+      );
+    }
+
+    // 2. In production, SESSION_SECRET cannot match known insecure/development placeholder patterns
+    const secretLower = validatedConfig.SESSION_SECRET.toLowerCase();
+    const hasInsecurePattern = INSECURE_SECRET_PATTERNS.some((pattern) =>
+      secretLower.includes(pattern),
+    );
+    if (hasInsecurePattern) {
+      throw new Error(
+        'Production security violation: SESSION_SECRET appears to be an insecure placeholder or development secret. Generate a cryptographically secure random string with at least 32 bytes (e.g. openssl rand -base64 32).',
+      );
+    }
+
+    // 3. In production, DATABASE_URL must not contain insecure default passwords like 'postgres:postgres' or 'postgrespassword'
+    if (
+      validatedConfig.DATABASE_URL.includes('postgres:postgres@') ||
+      validatedConfig.DATABASE_URL.includes('postgres:postgrespassword@')
+    ) {
+      throw new Error(
+        'Production security violation: DATABASE_URL uses default development credentials. Configure secure managed database credentials in production.',
+      );
+    }
   }
 
   return validatedConfig;

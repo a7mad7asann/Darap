@@ -271,4 +271,35 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 6 — Pilot Readiness & Production Hardening
-- **Status**: `NOT_STARTED` (ON HOLD — Stopped per explicit instruction; pending pilot readiness approval)
+- **Phase Status**: `IN_PROGRESS` (P6-001 completed; P6-002 through P6-006 pending)
+
+- [x] **P6-001 — Production Configuration & Deployment Readiness Audit**
+  - **Status**: `TESTED`
+  - **Dependencies**: AUDIT-001, AUDIT-002
+  - **Acceptance**: Comprehensive audit of environment variables and production configuration; startup validation preventing deployment with insecure placeholder secrets, missing `COOKIE_SECURE=true`, or default database credentials; elimination of hardcoded development origins from production CORS; configurable Swagger docs toggle (`ENABLE_SWAGGER`); secure cookie invalidation on logout; root `.dockerignore` creation; container security hardening with non-root user (`USER node`); unit test coverage in `env.validation.spec.ts`. All 128 tests passing.
+  - **File Paths**: `apps/api/src/config/env.validation.ts`, `apps/api/src/main.ts`, `apps/api/src/modules/auth/auth.controller.ts`, `.env.example`, `.dockerignore`, `infra/Dockerfile.api`, `infra/Dockerfile.web`, `infra/docker-compose.yml`, `apps/api/src/config/env.validation.spec.ts`
+
+- [ ] **P6-002 — Pilot Workflow Acceptance Suite**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Complete student and teacher journeys automated across 2 teachers and 5 students under multi-tenant RLS.
+
+- [ ] **P6-003 — Production Deployment Playbook & Managed DB Runbook**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; secret rotation guidelines.
+
+- [ ] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider.
+
+- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
+
+- [ ] **P6-006 — Operational Pilot Readiness Sign-off**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-002 through P6-005
+  - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers.
