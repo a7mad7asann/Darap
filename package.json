@@ -1,0 +1,23 @@
+{
+  "name": "darb-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DARB - Arabic-First Educational Platform",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @darb/api --filter @darb/web dev",
+    "dev:api": "pnpm --filter @darb/api dev",
+    "dev:web": "pnpm --filter @darb/web dev",
+    "build": "pnpm --filter @darb/contracts build && pnpm --filter @darb/api build && pnpm --filter @darb/web build",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test",
+    "db:migrate": "pnpm --filter @darb/api prisma:migrate",
+    "db:seed": "pnpm --filter @darb/api prisma:seed",
+    "db:generate": "pnpm --filter @darb/api prisma:generate"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

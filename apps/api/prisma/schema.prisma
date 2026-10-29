@@ -1,0 +1,538 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum JoinCodeStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  LATE
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  TIMED_OUT
+  GRADED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+enum AuditAction {
+  USER_LOGIN
+  USER_LOGOUT
+  PASSWORD_RESET
+  TENANT_CREATED
+  COURSE_CREATED
+  JOIN_CODE_GENERATED
+  JOIN_CODE_REDEEMED
+  CROSS_TENANT_ACCESS_BLOCKED
+}
+
+model Tenant {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  name                  String
+  slug                  String                 @unique
+  status                TenantStatus           @default(ACTIVE)
+  ownerId               String                 @db.Uuid
+  owner                 User                   @relation("TenantOwner", fields: [ownerId], references: [id])
+  memberships           Membership[]
+  courses               Course[]
+  joinCodes             JoinCode[]
+  enrollments           Enrollment[]
+  lessons               Lesson[]
+  lessonFiles           LessonFile[]
+  lessonProgresses      LessonProgress[]
+  fileObjects           FileObject[]
+  assignments           Assignment[]
+  assignmentSubmissions AssignmentSubmission[]
+  submissionAttachments SubmissionAttachment[]
+  exams                 Exam[]
+  examQuestions         ExamQuestion[]
+  examAttempts          ExamAttempt[]
+  attemptAnswers        AttemptAnswer[]
+  gradeRecords          GradeRecord[]
+  auditLogs             AuditLog[]
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  deletedAt             DateTime?              @db.Timestamptz(6)
+
+  @@index([ownerId])
+}
+
+model User {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  username              String                 @unique
+  passwordHash          String
+  displayName           String
+  email                 String?                @unique
+  defaultRole           UserRole               @default(STUDENT)
+  isActive              Boolean                @default(true)
+  failedLoginAttempts   Int                    @default(0)
+  lockedUntil           DateTime?              @db.Timestamptz(6)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  deletedAt             DateTime?              @db.Timestamptz(6)
+
+  ownedTenants          Tenant[]               @relation("TenantOwner")
+  memberships           Membership[]
+  teacherProfile        TeacherProfile?
+  studentProfile        StudentProfile?
+  taughtCourses         Course[]               @relation("CourseTeacher")
+  createdJoinCodes      JoinCode[]             @relation("JoinCodeCreator")
+  enrollments           Enrollment[]           @relation("StudentEnrollments")
+  uploadedFiles         FileObject[]           @relation("FileUploader")
+  lessonProgresses      LessonProgress[]       @relation("StudentProgress")
+  assignmentSubmissions AssignmentSubmission[] @relation("StudentSubmissions")
+  gradedSubmissions     AssignmentSubmission[] @relation("SubmissionGrader")
+  examAttempts          ExamAttempt[]          @relation("StudentExamAttempts")
+  gradeRecords          GradeRecord[]          @relation("StudentGrades")
+  auditLogs             AuditLog[]             @relation("ActorAuditLogs")
+
+  @@index([username])
+}
+
+model Membership {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  userId    String           @db.Uuid
+  role      UserRole
+  status    MembershipStatus @default(ACTIVE)
+  isOwner   Boolean          @default(false)
+  createdAt DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime         @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model TeacherProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  bio            String?
+  specialization String?
+  phone          String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudentProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @db.Uuid
+  gradeLevel         String?
+  parentPhone        String?
+  nationalIdOrNumber String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6)
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Course {
+  id           String        @id @default(uuid()) @db.Uuid
+  tenantId     String        @db.Uuid
+  teacherId    String        @db.Uuid
+  title        String
+  description  String?
+  subject      String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(6)
+  deletedAt    DateTime?     @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacher      User          @relation("CourseTeacher", fields: [teacherId], references: [id])
+  joinCodes    JoinCode[]
+  enrollments  Enrollment[]
+  lessons      Lesson[]
+  assignments  Assignment[]
+  exams        Exam[]
+  gradeRecords GradeRecord[]
+
+  @@index([tenantId])
+  @@index([teacherId])
+}
+
+model JoinCode {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  courseId    String         @db.Uuid
+  codeHash    String         @unique
+  codeHint    String
+  maxUses     Int?
+  currentUses Int            @default(0)
+  expiresAt   DateTime?      @db.Timestamptz(6)
+  status      JoinCodeStatus @default(ACTIVE)
+  createdById String         @db.Uuid
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator     User           @relation("JoinCodeCreator", fields: [createdById], references: [id])
+  enrollments Enrollment[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
+model Enrollment {
+  id              String           @id @default(uuid()) @db.Uuid
+  tenantId        String           @db.Uuid
+  courseId        String           @db.Uuid
+  studentId       String           @db.Uuid
+  status          EnrollmentStatus @default(ACTIVE)
+  enrolledAt      DateTime         @default(now()) @db.Timestamptz(6)
+  joinedViaCodeId String?          @db.Uuid
+  createdAt       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(6)
+  deletedAt       DateTime?        @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student         User             @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  joinedViaCode   JoinCode?        @relation(fields: [joinedViaCodeId], references: [id])
+
+  @@unique([courseId, studentId])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+model Lesson {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenantId    String           @db.Uuid
+  courseId    String           @db.Uuid
+  title       String
+  content     String?
+  orderIndex  Int              @default(0)
+  isPublished Boolean          @default(false)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(6)
+  deletedAt   DateTime?        @db.Timestamptz(6)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonFiles LessonFile[]
+  progresses  LessonProgress[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
+model FileObject {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  tenantId              String                 @db.Uuid
+  uploadedById          String                 @db.Uuid
+  originalName          String
+  mimeType              String
+  byteSize              BigInt
+  storageKey            String
+  isPublic              Boolean                @default(false)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  deletedAt             DateTime?              @db.Timestamptz(6)
+
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader              User                   @relation("FileUploader", fields: [uploadedById], references: [id])
+  lessonFiles           LessonFile[]
+  submissionAttachments SubmissionAttachment[]
+
+  @@index([tenantId])
+}
+
+model LessonFile {
+  id         String     @id @default(uuid()) @db.Uuid
+  tenantId   String     @db.Uuid
+  lessonId   String     @db.Uuid
+  fileId     String     @db.Uuid
+  orderIndex Int        @default(0)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  file       FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, fileId])
+  @@index([tenantId])
+}
+
+model LessonProgress {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  lessonId    String    @db.Uuid
+  studentId   String    @db.Uuid
+  isCompleted Boolean   @default(false)
+  completedAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     User      @relation("StudentProgress", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, studentId])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+model Assignment {
+  id          String                 @id @default(uuid()) @db.Uuid
+  tenantId    String                 @db.Uuid
+  courseId    String                 @db.Uuid
+  title       String
+  description String?
+  maxScore    Float                  @default(100.0)
+  dueDate     DateTime?              @db.Timestamptz(6)
+  status      AssignmentStatus       @default(DRAFT)
+  createdAt   DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime               @updatedAt @db.Timestamptz(6)
+  deletedAt   DateTime?              @db.Timestamptz(6)
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
+model AssignmentSubmission {
+  id          String                 @id @default(uuid()) @db.Uuid
+  tenantId    String                 @db.Uuid
+  assignmentId String                @db.Uuid
+  studentId   String                 @db.Uuid
+  textContent String?
+  submittedAt DateTime               @default(now()) @db.Timestamptz(6)
+  status      SubmissionStatus       @default(SUBMITTED)
+  score       Float?
+  feedback    String?
+  gradedById  String?                @db.Uuid
+  gradedAt    DateTime?              @db.Timestamptz(6)
+  createdAt   DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime               @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignment  Assignment             @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student     User                   @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  gradedBy    User?                  @relation("SubmissionGrader", fields: [gradedById], references: [id])
+  attachments SubmissionAttachment[]
+
+  @@unique([assignmentId, studentId])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+model SubmissionAttachment {
+  id           String               @id @default(uuid()) @db.Uuid
+  tenantId     String               @db.Uuid
+  submissionId String               @db.Uuid
+  fileId       String               @db.Uuid
+  createdAt    DateTime             @default(now()) @db.Timestamptz(6)
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submission   AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  file         FileObject           @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, fileId])
+  @@index([tenantId])
+}
+
+model Exam {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @db.Uuid
+  courseId        String         @db.Uuid
+  title           String
+  instructions    String?
+  durationMinutes Int            @default(60)
+  maxAttempts     Int            @default(1)
+  passingScore    Float?
+  startsAt        DateTime?      @db.Timestamptz(6)
+  endsAt          DateTime?      @db.Timestamptz(6)
+  status          ExamStatus     @default(DRAFT)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
+  deletedAt       DateTime?      @db.Timestamptz(6)
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions       ExamQuestion[]
+  attempts        ExamAttempt[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
+model ExamQuestion {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @db.Uuid
+  examId       String         @db.Uuid
+  prompt       String
+  questionType QuestionType   @default(MULTIPLE_CHOICE)
+  points       Float          @default(1.0)
+  orderIndex   Int            @default(0)
+  createdAt    DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(6)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  exam         Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  options      QuestionOption[]
+  answers      AttemptAnswer[]
+
+  @@index([tenantId])
+  @@index([examId])
+}
+
+model QuestionOption {
+  id         String        @id @default(uuid()) @db.Uuid
+  questionId String        @db.Uuid
+  content    String
+  isCorrect  Boolean       @default(false)
+  orderIndex Int           @default(0)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(6)
+
+  question   ExamQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    AttemptAnswer[]
+
+  @@index([questionId])
+}
+
+model ExamAttempt {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @db.Uuid
+  examId        String        @db.Uuid
+  studentId     String        @db.Uuid
+  attemptNumber Int           @default(1)
+  startedAt     DateTime      @default(now()) @db.Timestamptz(6)
+  submittedAt   DateTime?     @db.Timestamptz(6)
+  deadlineAt    DateTime      @db.Timestamptz(6)
+  score         Float?
+  isPassed      Boolean?
+  status        AttemptStatus @default(IN_PROGRESS)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  exam          Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student       User          @relation("StudentExamAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  answers       AttemptAnswer[]
+
+  @@unique([examId, studentId, attemptNumber])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+model AttemptAnswer {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @db.Uuid
+  attemptId        String          @db.Uuid
+  questionId       String          @db.Uuid
+  selectedOptionId String?         @db.Uuid
+  isAutoGraded     Boolean         @default(false)
+  awardedPoints    Float?
+  savedAt          DateTime        @default(now()) @db.Timestamptz(6)
+
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attempt          ExamAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question         ExamQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   QuestionOption? @relation(fields: [selectedOptionId], references: [id])
+
+  @@unique([attemptId, questionId])
+  @@index([tenantId])
+}
+
+model GradeRecord {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  courseId   String   @db.Uuid
+  studentId  String   @db.Uuid
+  itemType   String
+  itemId     String   @db.Uuid
+  score      Float
+  maxScore   Float
+  recordedAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student    User     @relation("StudentGrades", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId, itemType, itemId])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+model AuditLog {
+  id           String      @id @default(uuid()) @db.Uuid
+  tenantId     String?     @db.Uuid
+  actorId      String?     @db.Uuid
+  action       AuditAction
+  resourceType String
+  resourceId   String?
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now()) @db.Timestamptz(6)
+
+  tenant       Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor        User?       @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}

@@ -1,0 +1,111 @@
+name: DARB CI Pipeline
+
+on:
+  push:
+    branches: [main, master, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - name: Install Dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm approve-builds --all
+
+      - name: Build Contracts
+        run: pnpm --filter @darb/contracts build
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @darb/api prisma:generate
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Run Typecheck
+        run: pnpm typecheck
+
+  test-and-verify:
+    name: Test & Database Verification
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: darb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - name: Install Dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm approve-builds --all
+
+      - name: Build Contracts
+        run: pnpm --filter @darb/contracts build
+
+      - name: Run Migrations on Test Database
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/darb_test?schema=public
+        run: pnpm --filter @darb/api prisma:migrate
+
+      - name: Seed Database
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/darb_test?schema=public
+        run: pnpm --filter @darb/api prisma:seed
+
+      - name: Run Backend Unit Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/darb_test?schema=public
+          SESSION_SECRET: test-secret-at-least-32-characters-long-12345
+        run: pnpm --filter @darb/api test
+
+      - name: Run Backend E2E & RLS Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/darb_test?schema=public
+          APP_DATABASE_URL: postgresql://darb_app:darb_app_secret@localhost:5432/darb_test?schema=public
+          SESSION_SECRET: test-secret-at-least-32-characters-long-12345
+        run: pnpm --filter @darb/api test:e2e
+
+      - name: Run Frontend RTL Smoke Tests
+        run: pnpm --filter @darb/web test
+
+      - name: Build Frontend & Backend Applications
+        run: pnpm build

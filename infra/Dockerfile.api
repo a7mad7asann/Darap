@@ -1,0 +1,30 @@
+FROM node:18-alpine AS base
+RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+WORKDIR /app
+
+FROM base AS builder
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY packages/contracts/package.json ./packages/contracts/
+COPY apps/api/package.json ./apps/api/
+
+RUN pnpm install --frozen-lockfile
+COPY packages/contracts ./packages/contracts
+RUN pnpm --filter @darb/contracts build
+
+COPY apps/api ./apps/api
+RUN cd apps/api && pnpm prisma:generate
+RUN pnpm --filter @darb/api build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/contracts ./packages/contracts
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+
+EXPOSE 4000
+CMD ["node", "apps/api/dist/main"]
