@@ -18,6 +18,7 @@ import {
   School,
   Folder,
   Layers,
+  FileQuestion,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -26,6 +27,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import { StudentAssignmentsView } from '@/components/student/student-assignments-view';
+import { StudentExamsView } from '@/components/student/student-exams-view';
 import { apiClient } from '@/lib/api-client';
 import { StudentLessonDto } from '@darb/contracts';
 
@@ -37,7 +39,7 @@ export default function StudentCourseLearningPage() {
   const [courseInfo, setCourseInfo] = React.useState<any>(null);
   const [lessons, setLessons] = React.useState<StudentLessonDto[]>([]);
   const [selectedLessonId, setSelectedLessonId] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'lessons' | 'assignments'>('lessons');
+  const [activeTab, setActiveTab] = React.useState<'lessons' | 'assignments' | 'exams'>('lessons');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [updatingProgress, setUpdatingProgress] = React.useState(false);
@@ -246,9 +248,22 @@ export default function StudentCourseLearningPage() {
             <FileText className="w-4 h-4" />
             الواجبات والتكليفات
           </button>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'exams'
+                ? 'border-blue-600 text-blue-600 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileQuestion className="w-4 h-4" />
+            الاختبارات الإلكترونية
+          </button>
         </div>
 
-        {activeTab === 'assignments' ? (
+        {activeTab === 'exams' ? (
+          <StudentExamsView courseId={courseId} />
+        ) : activeTab === 'assignments' ? (
           <StudentAssignmentsView courseId={courseId} />
         ) : lessons.length === 0 ? (
           <EmptyState

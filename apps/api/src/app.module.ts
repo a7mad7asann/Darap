@@ -12,6 +12,7 @@ import { JoinCodesModule } from './modules/join-codes/join-codes.module';
 import { FilesModule } from './modules/files/files.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
+import { ExamsModule } from './modules/exams/exams.module';
 import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { AdminModule } from './modules/admin/admin.module';
     FilesModule,
     LearningModule,
     AssignmentsModule,
+    ExamsModule,
     AdminModule,
   ],
 })

@@ -40,6 +40,19 @@ import {
   GradeSubmissionDto,
   StudentSubmissionDto,
   AssignmentSubmissionSummaryDto,
+  CreateExamDto,
+  UpdateExamDto,
+  ExamSummaryDto,
+  ExamDetailDto,
+  CreateQuestionDto,
+  UpdateQuestionDto,
+  ExamQuestionDto,
+  StudentExamSummaryDto,
+  ActiveAttemptDto,
+  SaveAnswerDto,
+  ExamResultDto,
+  AttemptReviewDto,
+  ExamAttemptSummaryDto,
 } from '@darb/contracts';
 
 const API_BASE =
@@ -467,6 +480,186 @@ export const apiClient = {
       credentials: 'include',
     });
     return handleResponse<PresignDownloadResponseDto>(res);
+  },
+
+  // --- Exams & Auto-Grading (Teacher) ---
+  async getTeacherExams(courseId: string): Promise<ExamSummaryDto[]> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/exams`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<ExamSummaryDto[]>(res);
+  },
+
+  async createExam(courseId: string, payload: CreateExamDto): Promise<ExamSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/courses/${courseId}/exams`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ExamSummaryDto>(res);
+  },
+
+  async getTeacherExamDetails(examId: string): Promise<ExamDetailDto> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<ExamDetailDto>(res);
+  },
+
+  async updateExam(examId: string, payload: UpdateExamDto): Promise<ExamSummaryDto> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ExamSummaryDto>(res);
+  },
+
+  async publishExam(examId: string): Promise<{ id: string; status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/publish`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; status: string; message: string }>(res);
+  },
+
+  async closeExam(examId: string): Promise<{ id: string; status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/close`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; status: string; message: string }>(res);
+  },
+
+  async deleteExam(examId: string): Promise<{ id: string; message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return handleResponse<{ id: string; message: string }>(res);
+  },
+
+  async createQuestion(examId: string, payload: CreateQuestionDto): Promise<ExamQuestionDto> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ExamQuestionDto>(res);
+  },
+
+  async updateQuestion(
+    examId: string,
+    questionId: string,
+    payload: UpdateQuestionDto,
+  ): Promise<ExamQuestionDto> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/questions/${questionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ExamQuestionDto>(res);
+  },
+
+  async deleteQuestion(examId: string, questionId: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/questions/${questionId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
+  async getTeacherExamSubmissions(examId: string): Promise<ExamAttemptSummaryDto[]> {
+    const res = await fetch(`${API_BASE}/teacher/exams/${examId}/submissions`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<ExamAttemptSummaryDto[]>(res);
+  },
+
+  async getExamAttemptReview(attemptId: string): Promise<AttemptReviewDto> {
+    const res = await fetch(`${API_BASE}/teacher/exam-attempts/${attemptId}/review`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AttemptReviewDto>(res);
+  },
+
+  // --- Exams & Timed Attempts (Student) ---
+  async getStudentExams(courseId: string): Promise<StudentExamSummaryDto[]> {
+    const res = await fetch(`${API_BASE}/student/courses/${courseId}/exams`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<StudentExamSummaryDto[]>(res);
+  },
+
+  async getStudentExamDetails(examId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/student/exams/${examId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async startExamAttempt(examId: string): Promise<{
+    attemptId: string;
+    examId: string;
+    examTitle: string;
+    durationMinutes: number;
+    startedAt: string;
+    deadlineAt: string;
+    remainingSeconds: number;
+    attemptNumber: number;
+  }> {
+    const res = await fetch(`${API_BASE}/student/exams/${examId}/start`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async getActiveAttemptQuestions(attemptId: string): Promise<ActiveAttemptDto> {
+    const res = await fetch(`${API_BASE}/student/exam-attempts/${attemptId}/questions`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<ActiveAttemptDto>(res);
+  },
+
+  async saveAnswer(
+    attemptId: string,
+    payload: SaveAnswerDto,
+  ): Promise<{ questionId: string; selectedOptionId: string; savedAt: string }> {
+    const res = await fetch(`${API_BASE}/student/exam-attempts/${attemptId}/answers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ questionId: string; selectedOptionId: string; savedAt: string }>(res);
+  },
+
+  async submitExamAttempt(attemptId: string): Promise<ExamResultDto> {
+    const res = await fetch(`${API_BASE}/student/exam-attempts/${attemptId}/submit`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return handleResponse<ExamResultDto>(res);
+  },
+
+  async getStudentAttemptReview(attemptId: string): Promise<AttemptReviewDto> {
+    const res = await fetch(`${API_BASE}/student/exam-attempts/${attemptId}/review`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return handleResponse<AttemptReviewDto>(res);
   },
 
   // --- Student Learning ---

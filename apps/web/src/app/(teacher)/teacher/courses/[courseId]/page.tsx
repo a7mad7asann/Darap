@@ -25,6 +25,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  FileQuestion,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -35,6 +36,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import { TeacherAssignmentsTab } from '@/components/teacher/teacher-assignments-tab';
+import { TeacherExamsTab } from '@/components/teacher/teacher-exams-tab';
 import { apiClient } from '@/lib/api-client';
 import {
   CourseDetailsDto,
@@ -53,7 +55,9 @@ export default function TeacherCourseDetailPage() {
   const [course, setCourse] = React.useState<CourseDetailsDto | null>(null);
   const [joinCodes, setJoinCodes] = React.useState<JoinCodeSummaryDto[]>([]);
   const [students, setStudents] = React.useState<EnrolledStudentSummaryDto[]>([]);
-  const [activeTab, setActiveTab] = React.useState<'lessons' | 'codes' | 'students' | 'assignments'>('lessons');
+  const [activeTab, setActiveTab] = React.useState<
+    'lessons' | 'codes' | 'students' | 'assignments' | 'exams'
+  >('lessons');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -631,6 +635,17 @@ export default function TeacherCourseDetailPage() {
             <FileText className="w-4 h-4" />
             الواجبات والتكليفات
           </button>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'exams'
+                ? 'border-emerald-600 text-emerald-600 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileQuestion className="w-4 h-4" />
+            الاختبارات الإلكترونية
+          </button>
         </div>
 
         {/* TAB 1: Sections & Lessons */}
@@ -1125,6 +1140,11 @@ export default function TeacherCourseDetailPage() {
         {/* TAB 4: Assignments & Grading */}
         {activeTab === 'assignments' && (
           <TeacherAssignmentsTab courseId={courseId} />
+        )}
+
+        {/* TAB 5: Exams & Auto-Grading */}
+        {activeTab === 'exams' && (
+          <TeacherExamsTab courseId={courseId} />
         )}
       </main>
     </div>
