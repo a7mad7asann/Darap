@@ -312,7 +312,7 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 7 — Production Deployment & Controlled Pilot Launch
-- **Phase Status**: `IN_PROGRESS` (P7-001 completed; P7-002 through P7-006 planned)
+- **Phase Status**: `IN_PROGRESS` (P7-001 and P7-002 completed; P7-003 through P7-006 planned)
 
 - [x] **P7-001 — Production Deployment Discovery & Execution Planning**
   - **Status**: `TESTED`
@@ -320,11 +320,11 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Acceptance**: Comprehensive audit of the completed DARB codebase and documentation; readiness assessment across application hosting, managed PostgreSQL, managed object storage, security, observability, and pilot operations; identification and classification of gaps, operational risks, and external blockers; evaluation of hosting topologies and recommendation of reverse proxy path routing (Option B); dependency-ordered Phase 7 execution breakdown; authored authoritative Phase 7 report in `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`.
   - **File Paths**: `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`, `TASKS.md`, `PROJECT_MEMORY.md`, `CHANGELOG.md`
 
-- [ ] **P7-002 — Production Configuration Harmonization & Ingress Hardening**
-  - **Status**: `READY_TO_EXECUTE`
+- [x] **P7-002 — Production Configuration Harmonization & Ingress Hardening**
+  - **Status**: `TESTED`
   - **Dependencies**: P7-001
-  - **Acceptance**: Update `.env.example` to document `STORAGE_*` keys and remove obsolete `S3_*` comments; add optional `COOKIE_DOMAIN` support in `auth.controller.ts`; add optional `METRICS_AUTH_TOKEN` protection to `/api/v1/health/metrics` in `health.controller.ts`; verify full test suite passes.
-  - **File Paths**: `.env.example`, `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/health/health.controller.ts`
+  - **Acceptance**: Harmonized `.env.example` with actual `STORAGE_*` variables and removed legacy `S3_*` comments; added optional `COOKIE_DOMAIN` support in `env.validation.ts` and `auth.controller.ts` with strict validation and login/logout consistency; implemented `MetricsAuthGuard` with `METRICS_AUTH_TOKEN` protecting `GET /api/v1/health/metrics` using constant-time `crypto.timingSafeEqual` comparison on Bearer token, with query parameter rejection and zero token leakage; updated `DEPLOYMENT_PLAYBOOK.md` and `MONITORING_AND_ALERTING_RUNBOOK.md`; comprehensive unit tests (26 in `env.validation.spec.ts`, 10 in `metrics-auth.guard.spec.ts`) and 12 E2E tests in `phase7-ingress-hardening.e2e-spec.ts`. All monorepo tests passing.
+  - **File Paths**: `.env.example`, `apps/api/src/config/env.validation.ts`, `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/health/metrics-auth.guard.ts`, `apps/api/src/modules/health/health.module.ts`, `apps/api/src/modules/health/health.controller.ts`, `apps/api/src/config/env.validation.spec.ts`, `apps/api/src/modules/health/metrics-auth.guard.spec.ts`, `apps/api/test/phase7-ingress-hardening.e2e-spec.ts`, `docs/operations/DEPLOYMENT_PLAYBOOK.md`, `docs/operations/MONITORING_AND_ALERTING_RUNBOOK.md`
 
 - [ ] **P7-003 — Managed Cloud Infrastructure Provisioning & Secrets Binding**
   - **Status**: `BLOCKED` (Requires external credentials & infrastructure decisions)

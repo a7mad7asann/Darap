@@ -68,6 +68,14 @@ export class EnvironmentVariables {
   @IsOptional()
   COOKIE_SAME_SITE: 'lax' | 'strict' | 'none' = 'lax';
 
+  @IsString()
+  @IsOptional()
+  COOKIE_DOMAIN?: string;
+
+  @IsString()
+  @IsOptional()
+  METRICS_AUTH_TOKEN?: string;
+
   @IsNumber()
   @IsOptional()
   RATE_LIMIT_TTL_MS: number = 60000;
@@ -139,6 +147,45 @@ export function validateEnv(config: Record<string, unknown>) {
       .map((e) => Object.values(e.constraints ?? {}).join(', '))
       .join('; ');
     throw new Error(`Environment variable validation failed: ${errorDetails}`);
+  }
+
+  // Validation for optional COOKIE_DOMAIN if provided
+  if (validatedConfig.COOKIE_DOMAIN !== undefined) {
+    const domain = validatedConfig.COOKIE_DOMAIN.trim();
+    if (domain === '') {
+      throw new Error('COOKIE_DOMAIN cannot be an empty string if provided.');
+    }
+    if (domain.includes('/') || domain.includes(':') || /\s/.test(domain)) {
+      throw new Error(
+        `Invalid COOKIE_DOMAIN: "${domain}". Domain must not contain protocol, path, port, or whitespace (e.g. "example.com" or ".example.com").`,
+      );
+    }
+    const domainPattern =
+      /^\.?[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!domainPattern.test(domain)) {
+      throw new Error(
+        `Invalid COOKIE_DOMAIN format: "${domain}". Expected valid domain format (e.g. "darb.example.com" or ".darb.example.com").`,
+      );
+    }
+  }
+
+  // Validation for optional METRICS_AUTH_TOKEN if provided
+  if (validatedConfig.METRICS_AUTH_TOKEN !== undefined) {
+    const token = validatedConfig.METRICS_AUTH_TOKEN.trim();
+    if (token === '') {
+      throw new Error('METRICS_AUTH_TOKEN cannot be an empty string if provided.');
+    }
+    if (validatedConfig.NODE_ENV === Environment.Production) {
+      const tokenLower = token.toLowerCase();
+      const hasInsecurePattern = INSECURE_SECRET_PATTERNS.some((pattern) =>
+        tokenLower.includes(pattern),
+      );
+      if (hasInsecurePattern || token.length < 16) {
+        throw new Error(
+          'Production security violation: METRICS_AUTH_TOKEN must be at least 16 characters and cannot use insecure placeholder values.',
+        );
+      }
+    }
   }
 
   // Storage configuration invariants for S3 and R2

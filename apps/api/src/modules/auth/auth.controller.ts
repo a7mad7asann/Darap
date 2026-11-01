@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
@@ -64,15 +64,19 @@ export class AuthController {
     const cookieSecure = this.configService.get<boolean>('COOKIE_SECURE') ?? false;
     const cookieSameSite =
       (this.configService.get<string>('COOKIE_SAME_SITE') as 'lax' | 'strict' | 'none') || 'lax';
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN')?.trim();
     const ttlHours = this.configService.get<number>('SESSION_TTL_HOURS') || 24;
 
-    res.cookie(cookieName, result.sessionToken, {
+    const cookieOptions: CookieOptions = {
       httpOnly: true,
       secure: cookieSecure,
       sameSite: cookieSameSite,
       maxAge: ttlHours * 60 * 60 * 1000,
       path: '/',
-    });
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
+    };
+
+    res.cookie(cookieName, result.sessionToken, cookieOptions);
 
     return {
       user: result.user,
@@ -100,13 +104,17 @@ export class AuthController {
     const cookieSecure = this.configService.get<boolean>('COOKIE_SECURE') ?? false;
     const cookieSameSite =
       (this.configService.get<string>('COOKIE_SAME_SITE') as 'lax' | 'strict' | 'none') || 'lax';
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN')?.trim();
 
-    res.clearCookie(cookieName, {
+    const clearOptions: CookieOptions = {
       httpOnly: true,
       secure: cookieSecure,
       sameSite: cookieSameSite,
       path: '/',
-    });
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
+    };
+
+    res.clearCookie(cookieName, clearOptions);
 
     const ip = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];

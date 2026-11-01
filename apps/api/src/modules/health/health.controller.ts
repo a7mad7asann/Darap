@@ -1,8 +1,9 @@
-import { Controller, Get, Headers, HttpStatus, Query, Res } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Headers, HttpStatus, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { HealthService } from './health.service';
 import { MetricsService } from './metrics.service';
+import { MetricsAuthGuard } from './metrics-auth.guard';
 
 @ApiTags('Health')
 @Controller('health')
@@ -130,12 +131,18 @@ export class HealthController {
   }
 
   @Get('metrics')
+  @UseGuards(MetricsAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Lightweight operational metrics in JSON or Prometheus format',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Operational metrics snapshot',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required when METRICS_AUTH_TOKEN is configured',
   })
   getMetrics(
     @Query('format') format: string | undefined,

@@ -4,6 +4,39 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 7 — P7-002: Production Config Harmonization & Ingress Hardening
+
+### Summary
+- Harmonized production environment configuration documentation, implemented optional `COOKIE_DOMAIN` scoping for multi-subdomain architectures, and added optional `METRICS_AUTH_TOKEN` ingress protection to the operational metrics endpoint.
+- **Storage Configuration Harmonization (`.env.example`)**:
+  - Replaced legacy `# S3_*` comments with actual supported `STORAGE_*` environment variables matching `env.validation.ts` and `s3-storage.provider.ts`:
+    - `STORAGE_PROVIDER` (`local`, `s3`, `r2`)
+    - `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`
+    - `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`
+    - `STORAGE_FORCE_PATH_STYLE`, `STORAGE_SIGNED_URL_TTL_SECONDS`, `STORAGE_MAX_FILE_SIZE_BYTES`
+  - Clearly documented AWS S3 and Cloudflare R2 production configuration with zero egress fees.
+- **Optional `COOKIE_DOMAIN` Support (`auth.controller.ts`, `env.validation.ts`)**:
+  - Added optional `COOKIE_DOMAIN` to `EnvironmentVariables` with domain format validation (rejecting protocols, paths, ports, and whitespace).
+  - Configures `domain: cookieDomain` on session cookies in `auth.controller.ts` during both `login` and `logout`, ensuring consistent cookie lifecycle.
+  - Defaults to host-only cookies when omitted, maintaining zero-leakage behavior for same-origin path-routed deployments.
+- **Metrics Endpoint Ingress Protection (`MetricsAuthGuard`, `health.controller.ts`)**:
+  - Implemented `MetricsAuthGuard` protecting `GET /api/v1/health/metrics`.
+  - When `METRICS_AUTH_TOKEN` is unset, endpoint remains accessible for internal scrapers (ingress protection documented in runbooks).
+  - When configured, requires `Authorization: Bearer <METRICS_AUTH_TOKEN>` with constant-time comparison via `crypto.timingSafeEqual`.
+  - Strictly rejects query parameter token bypass attempts (`?token=...`).
+  - Zero token leakage in error messages or logs (protected by `redaction.util.ts`).
+  - Gating applies uniformly to both JSON and Prometheus formats while leaving `/live`, `/ready`, and `/dependencies` probes public.
+- **Operational Documentation Updates**:
+  - Updated `DEPLOYMENT_PLAYBOOK.md` § 4.1 with `COOKIE_DOMAIN`, `METRICS_AUTH_TOKEN`, and `STORAGE_*` variables.
+  - Updated `MONITORING_AND_ALERTING_RUNBOOK.md` § 3 with Prometheus `bearer_token` scraper configuration and ingress filtering rules (Caddy/Nginx).
+- **Test Coverage & Verification (260 Total Tests)**:
+  - Unit tests for validation and guard: 26 in `env.validation.spec.ts` (7 new), 10 in `metrics-auth.guard.spec.ts` (all new).
+  - E2E tests: 12 in `phase7-ingress-hardening.e2e-spec.ts` (all new).
+  - Total repository tests: 260 / 260 passed (195 E2E across 11 suites, 65 unit across 9 suites).
+  - Clean monorepo build, 0 lint errors, 0 typecheck errors, and `pnpm pilot:verify` passes.
+
+---
+
 ## 2026-11-01 — Phase 7 — P7-001: Production Deployment Discovery & Execution Planning
 
 ### Summary

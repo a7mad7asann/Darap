@@ -190,4 +190,140 @@ describe('Environment Variables Validation', () => {
       expect(r2Config.STORAGE_ENDPOINT).toBe('https://abc123def456.r2.cloudflarestorage.com');
     });
   });
+
+  describe('COOKIE_DOMAIN Configuration Validation', () => {
+    it('should allow valid domain names with or without leading dot', () => {
+      const config1 = validateEnv({
+        ...validEnv,
+        COOKIE_DOMAIN: 'darb.example.com',
+      });
+      expect(config1.COOKIE_DOMAIN).toBe('darb.example.com');
+
+      const config2 = validateEnv({
+        ...validEnv,
+        COOKIE_DOMAIN: '.darb.example.com',
+      });
+      expect(config2.COOKIE_DOMAIN).toBe('.darb.example.com');
+
+      const config3 = validateEnv({
+        ...validEnv,
+        COOKIE_DOMAIN: 'localhost',
+      });
+      expect(config3.COOKIE_DOMAIN).toBe('localhost');
+    });
+
+    it('should throw an error if COOKIE_DOMAIN is an empty string', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          COOKIE_DOMAIN: '   ',
+        });
+      }).toThrow(/COOKIE_DOMAIN cannot be an empty string/);
+    });
+
+    it('should throw an error if COOKIE_DOMAIN contains protocol, path, port, or whitespace', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          COOKIE_DOMAIN: 'https://darb.example.com',
+        });
+      }).toThrow(/Domain must not contain protocol, path, port, or whitespace/);
+
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          COOKIE_DOMAIN: 'darb.example.com:4000',
+        });
+      }).toThrow(/Domain must not contain protocol, path, port, or whitespace/);
+
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          COOKIE_DOMAIN: 'darb example com',
+        });
+      }).toThrow(/Domain must not contain protocol, path, port, or whitespace/);
+    });
+
+    it('should throw an error if COOKIE_DOMAIN has invalid formatting', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          COOKIE_DOMAIN: 'darb..example.com',
+        });
+      }).toThrow(/Invalid COOKIE_DOMAIN format/);
+    });
+
+    it('should leave COOKIE_DOMAIN undefined when omitted', () => {
+      const config = validateEnv(validEnv);
+      expect(config.COOKIE_DOMAIN).toBeUndefined();
+    });
+  });
+
+  describe('METRICS_AUTH_TOKEN Configuration Validation', () => {
+    it('should accept valid METRICS_AUTH_TOKEN in development', () => {
+      const config = validateEnv({
+        ...validEnv,
+        METRICS_AUTH_TOKEN: 'dev-token-12345',
+      });
+      expect(config.METRICS_AUTH_TOKEN).toBe('dev-token-12345');
+    });
+
+    it('should throw an error if METRICS_AUTH_TOKEN is an empty string', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          METRICS_AUTH_TOKEN: '   ',
+        });
+      }).toThrow(/METRICS_AUTH_TOKEN cannot be an empty string/);
+    });
+
+    it('should throw an error in production if METRICS_AUTH_TOKEN is too short (< 16 chars)', () => {
+      expect(() => {
+        validateEnv({
+          DATABASE_URL:
+            'postgresql://darb_admin:StrongProdPass987!@db.darb.internal:5432/darb_prod',
+          SESSION_SECRET: 'k9#mP$vL2!xQ8@wZ5*jR1^nB4&tY7(uE3)sA6%dF0',
+          PORT: 4000,
+          NODE_ENV: 'production',
+          COOKIE_SECURE: true,
+          METRICS_AUTH_TOKEN: 'short-token',
+        });
+      }).toThrow(
+        /METRICS_AUTH_TOKEN must be at least 16 characters and cannot use insecure placeholder values/,
+      );
+    });
+
+    it('should throw an error in production if METRICS_AUTH_TOKEN contains insecure placeholder words', () => {
+      expect(() => {
+        validateEnv({
+          DATABASE_URL:
+            'postgresql://darb_admin:StrongProdPass987!@db.darb.internal:5432/darb_prod',
+          SESSION_SECRET: 'k9#mP$vL2!xQ8@wZ5*jR1^nB4&tY7(uE3)sA6%dF0',
+          PORT: 4000,
+          NODE_ENV: 'production',
+          COOKIE_SECURE: true,
+          METRICS_AUTH_TOKEN: 'super-secret-key-1234567890',
+        });
+      }).toThrow(
+        /METRICS_AUTH_TOKEN must be at least 16 characters and cannot use insecure placeholder values/,
+      );
+    });
+
+    it('should accept strong METRICS_AUTH_TOKEN in production', () => {
+      const config = validateEnv({
+        DATABASE_URL: 'postgresql://darb_admin:StrongProdPass987!@db.darb.internal:5432/darb_prod',
+        SESSION_SECRET: 'k9#mP$vL2!xQ8@wZ5*jR1^nB4&tY7(uE3)sA6%dF0',
+        PORT: 4000,
+        NODE_ENV: 'production',
+        COOKIE_SECURE: true,
+        METRICS_AUTH_TOKEN: 'a8b7c6d5e4f3210987654321fedcba09',
+      });
+      expect(config.METRICS_AUTH_TOKEN).toBe('a8b7c6d5e4f3210987654321fedcba09');
+    });
+
+    it('should leave METRICS_AUTH_TOKEN undefined when omitted', () => {
+      const config = validateEnv(validEnv);
+      expect(config.METRICS_AUTH_TOKEN).toBeUndefined();
+    });
+  });
 });

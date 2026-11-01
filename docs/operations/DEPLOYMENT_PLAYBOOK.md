@@ -90,11 +90,22 @@ Never commit production secrets to Git. Inject environment variables via your in
 | `COOKIE_NAME` | No | `darb_session` | Name of the HTTP session cookie. |
 | `COOKIE_SECURE` | **Yes** | `false` | **Must be set to `true`** in production. Startup validation aborts if `false`. |
 | `COOKIE_SAME_SITE` | No | `lax` | Set to `lax` (or `none` if distinct apex domains). |
+| `COOKIE_DOMAIN` | No | - | Optional domain attribute for multi-subdomain cookie sharing (e.g. `.darb.example.com` or `darb.example.com`). Leave unset in single-domain or path-routed deployments to maintain host-only cookies. |
 | `NEXT_PUBLIC_APP_URL` | **Yes** | - | Fully qualified URL of the web frontend (e.g. `https://darb.example.com`). Used by CORS origin validator. |
 | `CORS_ALLOWED_ORIGINS` | No | - | Comma-separated list of additional trusted origins (e.g. `https://admin.example.com`). |
 | `ENABLE_SWAGGER` | No | `false` | Defaults to `false` in production. Set to `false` to keep `/api/docs` unmounted. |
 | `RATE_LIMIT_TTL_MS` | No | `60000` | Rate limiter window in milliseconds (default 1 minute). |
 | `RATE_LIMIT_MAX_ATTEMPTS` | No | `5` | Maximum failed login attempts before temporary account lockout. |
+| `METRICS_AUTH_TOKEN` | No | - | Optional bearer token protecting `/api/v1/health/metrics`. When unset, the metrics endpoint is unauthenticated at application layer (restrict at ingress in production). Minimum 16 characters in production. Generate using: `openssl rand -hex 24`. |
+| `STORAGE_PROVIDER` | No | `local` | Storage provider driver: `local`, `s3`, or `r2`. |
+| `STORAGE_BUCKET` | Yes (if s3/r2) | - | Target bucket name (e.g. `darb-production-assets`). |
+| `STORAGE_REGION` | No | `us-east-1` / `auto` | AWS region (e.g. `eu-central-1`) or `auto` for Cloudflare R2. |
+| `STORAGE_ENDPOINT` | Yes (for r2) | - | Required for Cloudflare R2 (`https://<account_id>.r2.cloudflarestorage.com`). |
+| `STORAGE_ACCESS_KEY_ID` | Yes (if s3/r2) | - | S3 Access Key ID or R2 Access Key ID. |
+| `STORAGE_SECRET_ACCESS_KEY` | Yes (if s3/r2) | - | S3 Secret Access Key or R2 Secret Access Key. |
+| `STORAGE_FORCE_PATH_STYLE` | No | `false` | Set to `true` for MinIO or local S3 emulators. |
+| `STORAGE_SIGNED_URL_TTL_SECONDS` | No | `900` | Expiration TTL in seconds for presigned upload URLs (default 15 minutes). |
+| `STORAGE_MAX_FILE_SIZE_BYTES` | No | `26214400` | Maximum file size cap in bytes (default 25 MB). |
 
 ### 4.2 Frontend Service (`@darb/web`)
 

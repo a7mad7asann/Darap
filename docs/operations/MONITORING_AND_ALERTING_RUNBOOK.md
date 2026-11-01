@@ -158,7 +158,60 @@ DARB provides an in-memory operational metrics collector that exposes request co
          - targets: ['api.darb.internal:4000']
    ```
 
-### 3.2 Cardinality Protection Guarantees
+### 3.2 Metrics Endpoint Ingress Protection (`METRICS_AUTH_TOKEN`)
+
+By default, the metrics endpoint is unauthenticated at the application level to allow internal network scrapers (e.g., in private Kubernetes pods or Docker networks) to collect metrics without credential overhead.
+
+To prevent public exposure of operational metrics (traffic volume, error counts, memory usage):
+
+#### Method A: Bearer Token Authentication (Application Layer)
+Configure `METRICS_AUTH_TOKEN` in the API environment (minimum 16 characters in production):
+```bash
+# Generate high-entropy bearer token
+METRICS_AUTH_TOKEN=$(openssl rand -hex 24)
+```
+
+When configured:
+1. All calls to `/api/v1/health/metrics` require header: `Authorization: Bearer <METRICS_AUTH_TOKEN>`.
+2. Missing, malformed, or invalid tokens are rejected with `HTTP 401 Unauthorized`.
+3. Tokens passed via URL query parameters (e.g. `?token=...`) are **strictly rejected**.
+4. Comparison uses constant-time `crypto.timingSafeEqual` to prevent timing attacks.
+5. In Prometheus scraper configuration, provide the token securely via `bearer_token` or `bearer_token_file`:
+   ```yaml
+   scrape_configs:
+     - job_name: 'darb-api'
+       metrics_path: '/api/v1/health/metrics'
+       params:
+         format: ['prometheus']
+       bearer_token: 'YOUR_METRICS_AUTH_TOKEN'
+       # Or read from secret file:
+       # bearer_token_file: '/etc/prometheus/secrets/darb_metrics_token'
+       scrape_interval: 15s
+       static_configs:
+         - targets: ['api.darb.example.com:443']
+   ```
+
+#### Method B: Ingress / Reverse Proxy Filtering (Network Layer)
+If `METRICS_AUTH_TOKEN` is unset, the ingress / reverse proxy must restrict access to `/api/v1/health/metrics`:
+- **Caddy**:
+  ```caddy
+  @metrics {
+      path /api/v1/health/metrics*
+      not remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1
+  }
+  respond @metrics "Forbidden" 403
+  ```
+- **Nginx**:
+  ```nginx
+  location /api/v1/health/metrics {
+      allow 10.0.0.0/8;
+      allow 127.0.0.1;
+      deny all;
+      proxy_pass http://api:4000;
+  }
+  ```
+
+### 3.3 Cardinality Protection Guarantees
 
 To prevent metric store degradation (cardinality explosion):
 - Dynamic UUID parameters (e.g. `/courses/6f2e82b7-a367...`) are automatically normalized to route templates (`/courses/:id`).

@@ -1,7 +1,7 @@
 # Phase 7 Report — Production Deployment & Controlled Pilot Launch
 
 - **Phase Objective**: Plan, execute, verify, and operationalize the production cloud deployment of DARB, followed by a controlled onboarding and launch of the 2–5 teacher pilot.
-- **Current Phase Status**: `IN_PROGRESS` (P7-001 completed; P7-002 through P7-006 planned)
+- **Current Phase Status**: `IN_PROGRESS` (P7-001, P7-002 completed; P7-003 through P7-006 planned)
 - **Prerequisites**: Phases 1 through 6 (`COMPLETED`), Pilot Readiness Gate Sign-off (`PILOT_READINESS_SIGN_OFF.md`), Commit `7056089`
 
 ---
@@ -96,9 +96,9 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 | Item | Area | Category | Evidence | Risk & Operational Impact | Required Action | Production Blocker? |
 |---|---|---|---|---|---|---|
 | **Local Host Docker CLI** | Hosting | `PARTIAL` | `docker: command not found` on dev runner | Cannot build Docker images locally on this runner host. | Build images via CI/CD runner or container deployment host. | No (Dockerfiles validated; CI/host handles builds) |
-| **Environment Template Sync** | Config | `PARTIAL` | `.env.example:74-79` has legacy `# S3_*` comments | Operators might configure obsolete variable names instead of `STORAGE_*`. | Update `.env.example` to document `STORAGE_PROVIDER`, `STORAGE_BUCKET`, etc. | No (Improves operational readiness) |
-| **Metrics Endpoint Access Gating** | Security | `PARTIAL` | `/health/metrics` has no auth guard in `health.controller.ts` | Exposes operational metrics (request rates, memory, latencies) publicly if ingress does not filter it. | Add optional token protection (`METRICS_AUTH_TOKEN`) or document ingress filtering rule. | No (Best practice for production ingress) |
-| **Optional Cookie Domain Scoping** | Security | `PARTIAL` | `res.cookie` in `auth.controller.ts` lacks `domain` option | Limits multi-subdomain cookie sharing if reverse proxy path routing is not used. | Support optional `COOKIE_DOMAIN` environment variable in `auth.controller.ts`. | No (Path routing makes it unnecessary; improves flexibility) |
+| **Environment Template Sync** | Config | `READY` | `.env.example` harmonized with `STORAGE_*`, `COOKIE_DOMAIN`, and `METRICS_AUTH_TOKEN` | Fully aligned with runtime implementation. | None (Completed in P7-002). | No |
+| **Metrics Endpoint Access Gating** | Security | `READY` | `MetricsAuthGuard` in `health.controller.ts` with constant-time Bearer token comparison | Protects operational metrics snapshot and Prometheus formats from unauthorized access when configured. | Documented in `MONITORING_AND_ALERTING_RUNBOOK.md`. | No |
+| **Optional Cookie Domain Scoping** | Security | `READY` | `COOKIE_DOMAIN` supported in `env.validation.ts` and `auth.controller.ts` | Allows flexible multi-subdomain cookie sharing while defaulting to host-only cookies when omitted. | Completed in P7-002. | No |
 | **Cloud Managed PostgreSQL** | Database | `BLOCKED` | Localhost DB used; no live cloud connection string | Application cannot run in production without a managed database. | User/operator provisions managed PostgreSQL instance (Neon/RDS/Supabase). | **YES (Blocks cloud deployment)** |
 | **Production Database Dual Roles** | Database | `PARTIAL` | Script in `MANAGED_POSTGRESQL_RUNBOOK.md § 2.2` | Running as single superuser in production weakens RLS defense-in-depth. | Execute role creation script on cloud database before running migrations. | **YES (Blocks production migration)** |
 | **Cloud Managed S3/R2 Bucket** | Storage | `BLOCKED` | Local storage driver used; no cloud bucket provisioned | Student worksheet uploads will fail in multi-container cloud environment without shared storage. | User/operator creates private bucket and IAM user / R2 API token. | **YES (Blocks cloud file uploads)** |
@@ -188,14 +188,16 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 - **Deliverables**: `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`, updated `TASKS.md`, `PROJECT_MEMORY.md`, `CHANGELOG.md`.
 
 #### P7-002: Production Configuration Harmonization & Ingress Hardening
-- **Status**: `READY_TO_EXECUTE`
+- **Status**: `TESTED`
 - **Dependencies**: P7-001
 - **Scope**:
-  - Update `.env.example` to accurately document all `STORAGE_*` variables and remove obsolete `S3_*` comments.
-  - Add optional `COOKIE_DOMAIN` support in `auth.controller.ts` for multi-subdomain flexibility.
-  - Implement optional `METRICS_AUTH_TOKEN` protection on `GET /api/v1/health/metrics` in `health.controller.ts` to prevent public information disclosure.
-  - Verify full test suite passes (237+ tests).
-- **Acceptance Criteria**: 0 lint/typecheck errors, updated `.env.example`, metrics endpoint optionally gated, all tests passing.
+  - Harmonized `.env.example` with actual `STORAGE_*` variables (`STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_FORCE_PATH_STYLE`, `STORAGE_SIGNED_URL_TTL_SECONDS`, `STORAGE_MAX_FILE_SIZE_BYTES`) and removed legacy `S3_*` comments.
+  - Implemented optional `COOKIE_DOMAIN` support in `env.validation.ts` and `auth.controller.ts` for session cookies on login and logout, ensuring host-only cookies remain the default when unset.
+  - Implemented `MetricsAuthGuard` with `METRICS_AUTH_TOKEN` protecting `GET /api/v1/health/metrics` using constant-time `crypto.timingSafeEqual` comparison on `Authorization: Bearer <token>`, with strict query-parameter rejection and zero token leakage.
+  - Updated operational runbooks (`DEPLOYMENT_PLAYBOOK.md` and `MONITORING_AND_ALERTING_RUNBOOK.md`).
+  - Unit tests: 36 passed across `env.validation.spec.ts` (26 tests) and `metrics-auth.guard.spec.ts` (10 tests).
+  - Dedicated E2E suite: 12 tests passed in `test/phase7-ingress-hardening.e2e-spec.ts`.
+- **Acceptance Criteria**: 0 lint/typecheck errors, updated `.env.example`, metrics endpoint gated, all tests passing.
 
 #### P7-003: Managed Cloud Infrastructure Provisioning & Secrets Binding
 - **Status**: `BLOCKED` (Requires external credentials & infrastructure decision)
