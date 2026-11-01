@@ -1,8 +1,23 @@
 # Phase 7 Report — Production Deployment & Controlled Pilot Launch
 
 - **Phase Objective**: Plan, execute, verify, and operationalize the production cloud deployment of DARB, followed by a controlled onboarding and launch of the 2–5 teacher pilot.
-- **Current Phase Status**: `IN_PROGRESS` (P7-001, P7-002 completed; P7-003 through P7-006 planned)
+- **Current Phase Status**: `IN_PROGRESS — DEPLOYMENT PAUSED` (Deployment Freeze Notice in effect; P7-001 and P7-002 completed; P7-003 through P7-006 PAUSED)
 - **Prerequisites**: Phases 1 through 6 (`COMPLETED`), Pilot Readiness Gate Sign-off (`PILOT_READINESS_SIGN_OFF.md`), Commit `7056089`
+
+> [!CAUTION]
+> **DEPLOYMENT FREEZE NOTICE (Effective 2026-11-01)**
+> Effective immediately, all deployment and production launch activities are **PAUSED** until explicit approval from the project owner.
+> **Enforced Restrictions**:
+> - Do not deploy to production or staging.
+> - Do not trigger deployment pipelines.
+> - Do not provision cloud infrastructure or paid resources.
+> - Do not modify DNS or domain settings.
+> - Do not publish application builds.
+> - Do not migrate or modify any live production database.
+> - Do not create or rotate production credentials.
+> - Do not onboard real pilot users.
+> 
+> Local development, code review, documentation, and local automated tests may continue only when explicitly authorized. Deployment may resume only after explicit authorization from the project owner. Tasks P7-003 through P7-006 are held in **PAUSED** status.
 
 ---
 
@@ -200,7 +215,7 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 - **Acceptance Criteria**: 0 lint/typecheck errors, updated `.env.example`, metrics endpoint gated, all tests passing.
 
 #### P7-003: Managed Cloud Infrastructure Provisioning & Secrets Binding
-- **Status**: `BLOCKED` (Requires external credentials & infrastructure decision)
+- **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
 - **Dependencies**: P7-002
 - **Scope**:
   - Provision Managed PostgreSQL 16 instance.
@@ -210,7 +225,7 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 - **Acceptance Criteria**: Cloud database reachable via TLS, storage bucket accessible via API credentials, secrets injected into deployment environment without committing to Git.
 
 #### P7-004: Production Database Role Setup & Migration Execution
-- **Status**: `BLOCKED` (Depends on P7-003)
+- **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
 - **Dependencies**: P7-003
 - **Scope**:
   - Execute idempotent dual-role provisioning script on the cloud database (`darb_migrator` and `darb_app`).
@@ -220,7 +235,7 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 - **Acceptance Criteria**: 8 migrations applied, `darb_app` has DML permissions with `NOSUPERUSER NOBYPASSRLS`, root administrator created.
 
 #### P7-005: Application Deployment & Domain / Ingress Verification
-- **Status**: `BLOCKED` (Depends on P7-003, P7-004)
+- **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
 - **Dependencies**: P7-003, P7-004
 - **Scope**:
   - Deploy `@darb/api` container connected via `APP_DATABASE_URL`.
@@ -230,7 +245,7 @@ Phase 6 concluded with commit `7056089`, completing all tasks `P6-001` through `
 - **Acceptance Criteria**: Both services healthy, probes return HTTP 200 over public HTTPS, zero credential leakage.
 
 #### P7-006: Production Smoke Tests & Controlled Pilot Launch
-- **Status**: `BLOCKED` (Depends on P7-005)
+- **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
 - **Dependencies**: P7-005
 - **Scope**:
   - Execute automated and manual smoke tests against production endpoints.

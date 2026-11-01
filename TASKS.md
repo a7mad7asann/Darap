@@ -312,7 +312,13 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 7 — Production Deployment & Controlled Pilot Launch
-- **Phase Status**: `IN_PROGRESS` (P7-001 and P7-002 completed; P7-003 through P7-006 planned)
+- **Phase Status**: `IN_PROGRESS — DEPLOYMENT PAUSED` (Deployment Freeze Notice in effect; P7-001 and P7-002 completed; P7-003 through P7-006 PAUSED)
+
+> [!CAUTION]
+> **DEPLOYMENT FREEZE NOTICE (Effective 2026-11-01)**
+> All deployment and production launch activities are strictly **PAUSED** until explicit approval from the project owner.
+> Prohibited during freeze: cloud provisioning, pipeline triggering, live migrations, DNS/domain changes, build publishing, production credential rotation, and pilot user onboarding.
+> Tasks P7-003 through P7-006 are in PAUSED status.
 
 - [x] **P7-001 — Production Deployment Discovery & Execution Planning**
   - **Status**: `TESTED`
@@ -327,25 +333,25 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **File Paths**: `.env.example`, `apps/api/src/config/env.validation.ts`, `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/health/metrics-auth.guard.ts`, `apps/api/src/modules/health/health.module.ts`, `apps/api/src/modules/health/health.controller.ts`, `apps/api/src/config/env.validation.spec.ts`, `apps/api/src/modules/health/metrics-auth.guard.spec.ts`, `apps/api/test/phase7-ingress-hardening.e2e-spec.ts`, `docs/operations/DEPLOYMENT_PLAYBOOK.md`, `docs/operations/MONITORING_AND_ALERTING_RUNBOOK.md`
 
 - [ ] **P7-003 — Managed Cloud Infrastructure Provisioning & Secrets Binding**
-  - **Status**: `BLOCKED` (Requires external credentials & infrastructure decisions)
+  - **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
   - **Dependencies**: P7-002
   - **Acceptance**: Provision Managed PostgreSQL 16 (AWS RDS / Neon / Supabase), provision private S3/R2 storage bucket with CORS, configure apex domain and DNS A/CNAME records, securely bind production environment secrets without committing credentials.
   - **File Paths**: External cloud provider dashboards / CLI
 
 - [ ] **P7-004 — Production Database Role Setup & Migration Execution**
-  - **Status**: `BLOCKED` (Depends on P7-003)
+  - **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
   - **Dependencies**: P7-003
   - **Acceptance**: Execute dual-role setup script (`darb_migrator` / `darb_app`) on production PostgreSQL; deploy Prisma migrations (`prisma migrate deploy`); audit forced RLS across all 7 tenant tables in `pg_class`; provision root administrator account via `pnpm db:admin`.
   - **File Paths**: `docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`, `apps/api/prisma/seed-admin.ts`
 
 - [ ] **P7-005 — Application Deployment & Domain / Ingress Verification**
-  - **Status**: `BLOCKED` (Depends on P7-003, P7-004)
+  - **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
   - **Dependencies**: P7-003, P7-004
   - **Acceptance**: Deploy `@darb/api` and `@darb/web` containers; configure reverse proxy routing and automatic TLS certificates; verify liveness (`/health/live`), readiness (`/health/ready`), and dependency (`/health/dependencies`) probes over public HTTPS.
   - **File Paths**: Ingress configuration, `DEPLOYMENT_PLAYBOOK.md`
 
 - [ ] **P7-006 — Production Smoke Tests & Controlled Pilot Launch**
-  - **Status**: `BLOCKED` (Depends on P7-005)
+  - **Status**: `PAUSED` (Deployment Freeze in effect; awaits project owner authorization)
   - **Dependencies**: P7-005
   - **Acceptance**: Execute live smoke tests against production HTTPS; test real file upload/download via S3/R2; onboard 2–5 pilot teachers via `/admin`; verify course creation, join-code redemption, assignments, and exam flows; sign off on controlled pilot launch.
   - **File Paths**: `docs/operations/PILOT_READINESS_SIGN_OFF.md`, `apps/api/test/pilot-readiness-gate.e2e-spec.ts`

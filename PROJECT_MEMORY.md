@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS`).
-- **Current Status**: **P7-002 TESTED & VERIFIED**. Harmonized `.env.example` with actual `STORAGE_*` variables and removed legacy `S3_*` comments. Implemented optional `COOKIE_DOMAIN` support in `env.validation.ts` and `auth.controller.ts` with domain validation and consistent login/logout cookie options. Implemented `MetricsAuthGuard` with `METRICS_AUTH_TOKEN` protecting `/api/v1/health/metrics` using constant-time `crypto.timingSafeEqual` comparison, with strict query-parameter rejection and zero secret leakage in errors or logs. Updated operational playbooks (`DEPLOYMENT_PLAYBOOK.md` and `MONITORING_AND_ALERTING_RUNBOOK.md`). 260 automated tests passing across the repository (195 E2E across 11 suites, 65 unit across 9 suites). Ready for cloud infrastructure provisioning (P7-003).
+- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS — DEPLOYMENT PAUSED`).
+- **Current Status**: **DEPLOYMENT FREEZE IN EFFECT (Effective 2026-11-01)**. All deployment and production launch activities are paused until explicit approval from the project owner. P7-001 and P7-002 are completed and verified (260 automated tests passing: 195 E2E across 11 suites, 65 unit across 9 suites; 0 lint/typecheck errors; clean build). Tasks P7-003, P7-004, P7-005, and P7-006 are **PAUSED**. Prohibited: cloud provisioning, pipeline triggering, live migrations, DNS/domain changes, build publishing, credential rotation, and real pilot user onboarding. Local development and automated testing remain permitted only when authorized.
 
 ---
 
@@ -77,12 +77,12 @@ This document serves as the single source of truth for the project state, verifi
 ## D. Current Position
 
 - **Last Completed Phase**: Phase 6 — Pilot Readiness & Production Hardening (`COMPLETED`).
-- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS`).
+- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS — DEPLOYMENT PAUSED`).
 - **Last Completed Task**: P7-002 — Production Config Harmonization & Ingress Hardening (`TESTED`).
-- **Current Task**: Completed P7-002 configuration harmonization, cookie domain scoping, metrics guard, and runbook updates.
-- **Next Recommended Task**: P7-003 — Managed Cloud Infrastructure Provisioning & Secrets Binding (provision PostgreSQL 16 on Neon/RDS, provision S3/R2 bucket, configure domain/DNS).
-- **Blocking Issues**: P7-003 through P7-006 require external cloud provider credentials, managed PostgreSQL provisioning, and domain registration.
-- **Decisions Requiring Approval**: Hosting tier selection (Tier 1 PaaS e.g. Railway/Render vs Tier 2 VPS with Caddy) and domain registration.
+- **Current Task**: Deployment Freeze Notice in effect. All deployment, provisioning, and launch operations are paused.
+- **Next Recommended Task**: None (Deployment paused). Awaiting explicit project owner authorization before resuming Phase 7 deployment tasks (P7-003 through P7-006).
+- **Blocking Issues**: Deployment Freeze Notice. Tasks P7-003 through P7-006 strictly on hold.
+- **Decisions Requiring Approval**: Project owner authorization to lift deployment freeze, hosting tier selection, and domain registration.
 
 ---
 
