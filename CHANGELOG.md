@@ -4,6 +4,35 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 6 — P6-006: Operational Pilot Readiness Sign-off & Phase 6 Completion
+
+### Summary
+- Completed the final operational pilot readiness sign-off for DARB, marking **Phase 6 as fully COMPLETED**.
+- **Automated CLI Pilot Readiness Gate (`apps/api/scripts/verify-pilot-readiness.ts`)**:
+  - Implemented standalone CLI readiness gate tool executed via `pnpm pilot:verify` (or `pnpm --filter @darb/api pilot:verify`).
+  - Directly queries PostgreSQL system catalogs (`pg_class`) to verify forced Row-Level Security (`relrowsecurity = true` AND `relforcerowsecurity = true`) across all 7 tenant tables (`Course`, `Section`, `Lesson`, `Assignment`, `Exam`, `FileObject`, `GradeRecord`).
+  - Audits database connectivity, migration state, pilot demographics (2 tenants, 2 teachers, 5 students), root administrator existence (`defaultRole = 'ADMIN'`), active object storage provider (`local`/`s3`/`r2`), and session secret length (>= 32 chars).
+  - Emits clear formatted operational checklist: `ALL PILOT READINESS CRITERIA VERIFIED [GATE PASSED]`.
+- **Executable Pilot Readiness Gate E2E Test Suite (`apps/api/test/pilot-readiness-gate.e2e-spec.ts`)**:
+  - Authored 13 automated end-to-end gate tests asserting all 6 pilot operational dimensions against real NestJS and PostgreSQL instances:
+    - *Gate 1*: Production config & startup invariants (`validateEnv` rejects insecure secrets, development DB credentials, and unconfigured HTTPS cookie settings).
+    - *Gate 2*: Database security & forced RLS across all 7 tenant tables; strict cross-tenant isolation (404 Not Found on cross-tenant requests).
+    - *Gate 3*: Authentication & privacy invariants: student username-only login (no emails required), session cookie persistence on `/auth/me`, secure logout cookie invalidation (`Max-Age=0`).
+    - *Gate 4*: Core educational workflows: teacher course creation, curriculum section/lesson authoring, publishing, cryptographic join-code generation with usage limits, and student code redemption.
+    - *Gate 5*: Cloud object storage & asset delivery: presigned upload URL issuance, upload ticket verification, 25MB file size limit enforcement, and authorized asset metadata retrieval (`GET /api/v1/files/:fileId/metadata`).
+    - *Gate 6*: Observability & health probes: fast uncoupled `/health/live` (<10ms), non-leaking `/health/ready` (3000ms DB timeout), deep backing inspection `/health/dependencies` (non-destructive HeadBucket), dual-format `/health/metrics` (JSON + Prometheus 0.0.4 with route normalization), sanitized `X-Request-Id` correlation, and sensitive data redaction.
+  - All 13 tests passed in 7.05s.
+- **Authoritative Pilot Readiness Sign-off Document (`docs/operations/PILOT_READINESS_SIGN_OFF.md`)**:
+  - Authored comprehensive operational sign-off document detailing the 6 readiness gates, local vs cloud operational boundaries, Day 0 pre-launch deployment sequence, and formal launch determination: **APPROVED — READY FOR PILOT LAUNCH**.
+- **Final Repository Metrics**:
+  - 237 automated tests passing across the repository (183 E2E across 10 suites, 54 unit across 8 suites).
+  - Monorepo clean build passing (`contracts`, `api`, `web`).
+  - Zero TypeScript typecheck errors (`pnpm typecheck`).
+  - Zero ESLint linting errors or warnings (`pnpm lint`).
+  - Phase 6 officially marked `COMPLETED`.
+
+---
+
 ## 2026-11-01 — Phase 6 — P6-005: Monitoring, Alerting & Health Probes Hardening
 
 ### Summary

@@ -1,7 +1,7 @@
 # Phase 6 Report — Pilot Readiness & Production Hardening
 
 - **Phase Objective**: Complete comprehensive production configuration audit, end-to-end acceptance testing for the 2–5 teacher pilot, harden managed cloud deployment playbooks, and finalize operational monitoring.
-- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, P6-003, P6-004, and P6-005 TESTED; P6-006 NOT_STARTED)
+- **Current Phase Status**: `COMPLETED` (P6-001 through P6-006 TESTED)
 - **Prerequisites**: Phases 1 through 5, Pre-Phase-6 Audit
 
 ---
@@ -15,7 +15,7 @@
 | `P6-003` | Production Deployment Playbook & Managed DB Runbook | Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; dual-role least-privilege setup; deployment and rollback procedures; initial admin provisioning. | `TESTED` |
 | `P6-004` | Managed Object Storage (S3/R2) Cloud Integration | Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider. | `TESTED` |
 | `P6-005` | Monitoring, Alerting & Health Probes Hardening | Three distinct health probes (live, ready, dependencies), operational metrics in JSON & Prometheus formats, structured JSON logging with X-Request-Id correlation, strict data redaction, and complete alerting runbook. | `TESTED` |
-| `P6-006` | Operational Pilot Readiness Sign-off | Final operational checklist validation for the pilot launch with 2–5 teachers. | `NOT_STARTED` |
+| `P6-006` | Operational Pilot Readiness Sign-off | Final operational checklist validation for the pilot launch with 2–5 teachers. Automated readiness gate script (`pnpm pilot:verify`), 13 E2E readiness tests, and authoritative operational sign-off document. | `TESTED` |
 
 ---
 
@@ -261,7 +261,60 @@
 - Total E2E tests: **9 suites, 170 / 170 passed**.
 - Monorepo build (`pnpm build`): Clean pass across `contracts`, `api`, and `web`.
 - Monorepo lint (`pnpm lint`) and typecheck (`pnpm typecheck`): 0 errors, 0 warnings.
-- **Status of P6-006**: Confirmed `NOT_STARTED`.
+- **Status of P6-006**: Advanced to `TESTED`.
+
+---
+
+## 7. Work Completed (P6-006: Operational Pilot Readiness Sign-off)
+
+### 7.1 Automated CLI Pilot Readiness Gate (`verify-pilot-readiness.ts`)
+- Implemented comprehensive CLI gate verification tool in [`apps/api/scripts/verify-pilot-readiness.ts`](file:///home/user/Documents/Darap/apps/api/scripts/verify-pilot-readiness.ts).
+- Registered root package script `pnpm pilot:verify` and API workspace script `pnpm --filter @darb/api pilot:verify`.
+- Directly checks and asserts 6 operational criteria:
+  1. **Database & Schema Invariants**: Active PostgreSQL connection, database version check, all Prisma migrations applied.
+  2. **Multi-Tenant Row-Level Security (RLS)**: Queries `pg_class` for `relrowsecurity` and `relforcerowsecurity` asserting forced RLS across all 7 tenant tables (`Course`, `Section`, `Lesson`, `Assignment`, `Exam`, `FileObject`, `GradeRecord`).
+  3. **Pilot Demographics & Tenancy**: Verifies >= 2 active tenants (found 2: "مدرسة الأندلس" and "مدرسة قرطبة"), >= 2 teachers (found 2: Ahmed & Layla), >= 5 students (found 5: Tariq, Sara, Omar, Mona, Zain).
+  4. **Administrative Provisioning**: Confirms presence of at least 1 root system administrator (`defaultRole = 'ADMIN'`).
+  5. **Cloud Object Storage Configuration**: Validates active storage provider (`local`, `s3`, or `r2`) and bucket / credentials readiness.
+  6. **Security & Session Invariants**: Confirms session secret length >= 32 characters, non-default credentials, and Argon2id password hashing readiness.
+- Output: Emits structured green checklist and summary: `ALL PILOT READINESS CRITERIA VERIFIED [GATE PASSED]`.
+
+### 7.2 Executable Pilot Readiness Gate E2E Test Suite (`pilot-readiness-gate.e2e-spec.ts`)
+- Authored 13 automated end-to-end gate tests in [`apps/api/test/pilot-readiness-gate.e2e-spec.ts`](file:///home/user/Documents/Darap/apps/api/test/pilot-readiness-gate.e2e-spec.ts).
+- Covers all 6 operational gates against live application instances:
+  - **Gate 1 — Production Configuration & Startup Invariants**: Rejects insecure placeholder session secrets in production, rejects default dev database credentials, enforces `COOKIE_SECURE=true`.
+  - **Gate 2 — Database Security & Tenant Isolation (Forced RLS)**: Confirms `relforcerowsecurity=true` on all tenant tables in PostgreSQL `pg_class`; verifies cross-tenant requests return 404 Not Found without leaking data.
+  - **Gate 3 — Authentication & Privacy Invariants**: Verifies students authenticate without personal emails via username; verifies session cookie persistence; verifies secure cookie invalidation upon logout (`Max-Age=0`).
+  - **Gate 4 — Core Educational Workflows Acceptance**: Verifies full teacher course creation, curriculum section/lesson authoring, publishing, cryptographic join-code issuance, and student code redemption.
+  - **Gate 5 — Managed Object Storage & Asset Delivery**: Verifies lesson attachment presigned upload URL issuance, upload ticket completion, 25MB file size limit enforcement, and authorized asset metadata retrieval.
+  - **Gate 6 — Observability, Health Probes & Redaction**: Verifies fast independent `/health/live`, non-leaking `/health/ready`, deep `/health/dependencies`, dual-format `/health/metrics` (JSON + Prometheus 0.0.4), sanitized `X-Request-Id` correlation, and automated password redaction in response envelopes.
+- Test Execution: All 13 tests pass in ~7 seconds.
+
+### 7.3 Authoritative Operational Sign-off Document (`PILOT_READINESS_SIGN_OFF.md`)
+- Authored [`docs/operations/PILOT_READINESS_SIGN_OFF.md`](file:///home/user/Documents/Darap/docs/operations/PILOT_READINESS_SIGN_OFF.md) establishing:
+  - Six operational sign-off gates with status and verifiable evidence.
+  - Clear architectural division between local development and production cloud deployment.
+  - Complete Day 0 pre-launch deployment sequence (DB role provisioning, migration execution, admin seeding, application deploy, smoke tests).
+  - Explicit launch boundaries and non-goals.
+  - Official sign-off status: **APPROVED — READY FOR PILOT LAUNCH**.
+
+### 7.4 Final Monorepo Quality & Test Metrics
+- **Unit Tests**: 8 suites, 54 / 54 passing.
+- **E2E Tests**: 10 suites, 183 / 183 passing.
+- **Total Automated Tests**: 237 / 237 passing.
+- **CLI Gate Check**: `pnpm pilot:verify` -> `[GATE PASSED]`.
+- **Typecheck**: 0 errors across all workspaces (`pnpm typecheck`).
+- **Linter**: 0 errors, 0 warnings across all workspaces (`pnpm lint`).
+- **Production Build**: 0 errors (`pnpm build`).
+
+---
+
+## 8. Final Phase 6 Determination
+
+**Phase 6 is hereby marked as COMPLETED.**
+
+All 6 tasks (`P6-001`, `P6-002`, `P6-003`, `P6-004`, `P6-005`, `P6-006`) are fully tested and operational. The DARB platform is hardened, documented, and verified for pilot launch with 2–5 teachers and their students.
+
 
 
 
