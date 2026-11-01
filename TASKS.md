@@ -271,7 +271,7 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 6 — Pilot Readiness & Production Hardening
-- **Phase Status**: `IN_PROGRESS` (P6-001 completed; P6-002 through P6-006 pending)
+- **Phase Status**: `IN_PROGRESS` (P6-001 and P6-002 completed; P6-003 through P6-006 pending)
 
 - [x] **P6-001 — Production Configuration & Deployment Readiness Audit**
   - **Status**: `TESTED`
@@ -279,10 +279,11 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Acceptance**: Comprehensive audit of environment variables and production configuration; startup validation preventing deployment with insecure placeholder secrets, missing `COOKIE_SECURE=true`, or default database credentials; elimination of hardcoded development origins from production CORS; configurable Swagger docs toggle (`ENABLE_SWAGGER`); secure cookie invalidation on logout; root `.dockerignore` creation; container security hardening with non-root user (`USER node`); unit test coverage in `env.validation.spec.ts`. All 128 tests passing.
   - **File Paths**: `apps/api/src/config/env.validation.ts`, `apps/api/src/main.ts`, `apps/api/src/modules/auth/auth.controller.ts`, `.env.example`, `.dockerignore`, `infra/Dockerfile.api`, `infra/Dockerfile.web`, `infra/docker-compose.yml`, `apps/api/src/config/env.validation.spec.ts`
 
-- [ ] **P6-002 — Pilot Workflow Acceptance Suite**
-  - **Status**: `NOT_STARTED`
+- [x] **P6-002 — Pilot Workflow Acceptance Suite**
+  - **Status**: `TESTED`
   - **Dependencies**: P6-001
-  - **Acceptance**: Complete student and teacher journeys automated across 2 teachers and 5 students under multi-tenant RLS.
+  - **Acceptance**: Complete student and teacher journeys automated across 2 teachers (Ahmed & Layla) and 5 students (Tariq, Sara, Omar, Mona, Zain) under multi-tenant PostgreSQL Row-Level Security (RLS). 43 automated tests across 7 comprehensive workflows: Authentication & Session Persistence (cookie persistence, logout, invalid token rejection, username login), Teacher & Course Setup (course lifecycle, sections, lessons, publishing, join-code generation and revocation), Student Enrollment & Learning Journey (code redemption, exhaustion, revocation, curriculum navigation omitting drafts, lesson progress marking), Assignments & Manual Grading (publishing, submission, duplicate rejection, score bounds, teacher grading, atomic `GradeRecord`), Timed MCQ Exams & Auto-Grading (exam creation, server-enforced countdown timer, `isCorrect` stripping, incremental answer saving, auto-grading engine, GradeRecord sync), Course Roster & Authorization (teacher roster access, cross-tenant 404, student 403, unauthenticated 401), and Cross-Tenant Isolation & RLS (strict cross-tenant isolation on courses, sections, assignments, and exams). All 171 repository tests passing (146 E2E, 27 unit).
+  - **File Paths**: `apps/api/test/pilot-workflow-acceptance.e2e-spec.ts`
 
 - [ ] **P6-003 — Production Deployment Playbook & Managed DB Runbook**
   - **Status**: `NOT_STARTED`

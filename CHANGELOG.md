@@ -4,6 +4,71 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 6 — P6-002: Pilot Workflow Acceptance Suite
+
+### Summary
+- Implemented and verified comprehensive automated pilot workflow acceptance suite (`apps/api/test/pilot-workflow-acceptance.e2e-spec.ts`) modeling real multi-tenant educational journeys across 2 teachers and 5 students under PostgreSQL Row-Level Security (RLS).
+- **Workflows Automated (43 tests)**:
+  - **Workflow 1: Authentication & Session Persistence (5 tests)**:
+    - Admin provisions 3 additional students without email addresses (5 total students: Tariq, Sara, Omar, Mona, Zain).
+    - All 5 students authenticate using username-only credentials and establish session cookies.
+    - Verified session persistence via `/api/v1/auth/me` with multi-tenant context resolution.
+    - Verified rejection of forged or expired session tokens with `401 Unauthorized`.
+    - Verified logout clears session cookies and prevents subsequent authenticated access.
+  - **Workflow 2: Teacher and Course Setup (7 tests)**:
+    - Teacher Ahmed creates course "فيزياء 101" (Physics 101) in draft status.
+    - Ahmed updates course metadata and grade level.
+    - Ahmed creates curriculum sections ("الميكانيكا", "الديناميكا الحرارية").
+    - Ahmed creates lessons within sections and updates ordering.
+    - Ahmed publishes course, making it available for enrollment.
+    - Ahmed generates join codes (Code A: max 3 uses; Code B: single use, revoked).
+    - Teacher Layla creates course "كيمياء 101" (Chemistry 101) and generates join code C.
+  - **Workflow 3: Student Enrollment & Learning Journey (8 tests)**:
+    - Attempting to join with revoked code is rejected with generic error.
+    - Students Tariq and Sara join Ahmed's physics course using Code A.
+    - Student Omar joins Ahmed's physics course, exhausting Code A (usage 3/3).
+    - Code A rejection verified upon exhaustion.
+    - Students Mona and Zain join Layla's chemistry course using Code C.
+    - Students retrieve course curriculum; draft lessons are omitted from student view.
+    - Tariq marks lesson completion; progress percentage accurately updates.
+    - Unenrolled students and unauthenticated requests are strictly denied access.
+  - **Workflow 4: Assignments & Manual Grading (6 tests)**:
+    - Teacher Ahmed authors and publishes an assignment ("واجب قوانين نيوتن") with max score 100.
+    - Student Tariq submits assignment solution.
+    - Tariq attempting duplicate submission is rejected (enforcing unique constraint).
+    - Tariq views submission before grading; score and feedback are masked.
+    - Teacher Ahmed grades Tariq's submission (95/100) with Arabic feedback.
+    - Grade release policy: Tariq views grade and feedback; atomic `GradeRecord` synced.
+    - Student Mona (enrolled in Layla's course) is denied access to Ahmed's assignment.
+  - **Workflow 5: Timed MCQ Exams & Auto-Grading (8 tests)**:
+    - Teacher Ahmed creates timed MCQ exam with pass score 70 and 2 questions.
+    - Student Sara starts exam attempt; backend sets server-side `deadlineAt`.
+    - Anti-cheating invariant: `isCorrect` property is stripped from questions and options payload.
+    - Sara submits answers incrementally in real time (`saveAnswer`).
+    - Exam auto-grading engine calculates score upon submission (100%), sets `status = SUBMITTED`, and updates `GradeRecord`.
+    - Attempt locking: answers cannot be modified once submitted.
+    - Post-submission review: correct answers and explanations revealed.
+    - Hijacking prevention: Student Tariq is denied access to Sara's attempt.
+  - **Workflow 6: Course Roster & Teacher Authorization (4 tests)**:
+    - Teacher Ahmed queries course student roster (`GET /api/v1/teacher/courses/:courseId/students`) returning 3 enrolled students (Tariq, Sara, Omar).
+    - Teacher Layla (cross-tenant) querying Ahmed's roster is denied with `404 Not Found`.
+    - Student Tariq attempting to access teacher roster is denied with `403 Forbidden`.
+    - Unauthenticated request to roster is denied with `401 Unauthorized`.
+  - **Workflow 7: Cross-Tenant Isolation & RLS (5 tests)**:
+    - Teacher Layla is denied access to Ahmed's courses (`404 Not Found`).
+    - Teacher Layla is denied access to Ahmed's sections.
+    - Teacher Layla is denied access to Ahmed's assignments.
+    - Teacher Layla is denied access to Ahmed's exams.
+    - Teacher Ahmed is denied access to Layla's course.
+- **Verification Results**:
+  - Full E2E suite: 7 passed, 7 total (146 passed out of 146 tests).
+  - Pilot workflow suite: 43 passed out of 43 tests (10.74s).
+  - Unit tests: 4 suites passed, 27 total tests passed.
+  - Build & Typecheck: Monorepo build 100% clean, 0 TypeScript errors, 0 ESLint warnings.
+  - P6-003 through P6-006 confirmed as `NOT_STARTED`.
+
+---
+
 ## 2026-10-29 — Phase 6 — P6-001: Production Configuration & Deployment Readiness Audit
 
 ### Summary
