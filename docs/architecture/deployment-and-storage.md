@@ -50,3 +50,12 @@ The `FileObject` model in `schema.prisma` already includes:
 | **Testing / CI** | `localhost:5432/darb_test` | `false` | In-memory / Mock | Disabled / High |
 | **Staging** | Managed RDS (Staging) | `true` | `https://staging.darb.app` | 5 / minute |
 | **Production** | Managed RDS (HA Replica) | `true` | `https://darb.app` | 5 / minute |
+
+---
+
+## 4. Operational Playbooks
+
+For step-by-step production setup, managed database configuration, deployment sequences, and rollback runbooks, refer to:
+- [Production Deployment Playbook](../operations/DEPLOYMENT_PLAYBOOK.md)
+- [Managed PostgreSQL Runbook & RLS Operational Guide](../operations/MANAGED_POSTGRESQL_RUNBOOK.md)
+

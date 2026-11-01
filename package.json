@@ -13,6 +13,7 @@
     "test": "pnpm --recursive test",
     "db:migrate": "pnpm --filter @darb/api prisma:migrate",
     "db:seed": "pnpm --filter @darb/api prisma:seed",
+    "db:admin": "pnpm --filter @darb/api prisma:admin",
     "db:generate": "pnpm --filter @darb/api prisma:generate"
   },
   "devDependencies": {

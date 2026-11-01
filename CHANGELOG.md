@@ -4,6 +4,36 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 6 — P6-003: Production Deployment Playbook & Managed DB Runbook
+
+### Summary
+- Authored production deployment playbook and managed PostgreSQL runbook establishing provider-neutral operational procedures, dual-role least-privilege database access, connection pooler sizing, zero-downtime schema evolution, and initial administrator provisioning.
+- **Production Deployment Playbook (`docs/operations/DEPLOYMENT_PLAYBOOK.md`)**:
+  - Detailed runtime versions and sizing: Node.js 18/20 LTS, pnpm 12, PostgreSQL 16, 1 GB RAM minimum per replica for Argon2id hashing.
+  - Specified DNS & HTTPS topologies: Subdomains with shared apex (recommended), single domain reverse proxy path routing, and distinct apex domains with respective cookie flags (`SameSite=Lax` vs `None`).
+  - Documented complete environment variable requirements and validation constraints for `@darb/api` and `@darb/web`.
+  - Detailed deployment ordering: Database Migration -> API Deployment -> Readiness Probe Verification (`/api/v1/health/ready`) -> Web Frontend Deployment.
+  - Provided comprehensive post-deployment smoke tests (liveness, readiness, CORS headers, cookie attributes, invalid login lockout).
+  - Outlined rollback strategies distinguishing code rollbacks from database schema evolution; prohibited blind snapshot restores over active writes; documented expand-contract migration patterns.
+- **Managed PostgreSQL Runbook (`docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`)**:
+  - Defined dual database role architecture: `darb_migrator` (DDL schema owner, `DATABASE_URL`) vs `darb_app` (DML only, `NOSUPERUSER NOBYPASSRLS`, `APP_DATABASE_URL`).
+  - Created idempotent provisioning SQL script for managed PostgreSQL databases.
+  - Documented PostgreSQL Row-Level Security (RLS) enforcement verification queries inspecting `pg_tables` and `pg_class` (`FORCE ROW LEVEL SECURITY`).
+  - Verified transaction-mode connection pooler compatibility (PgBouncer, Supavisor) with transaction-scoped `SET LOCAL app.current_tenant_id`.
+  - Documented port separation: direct connection (port 5432) for Prisma migrations vs transaction pooler (port 6543) for runtime API.
+  - Documented database connectivity troubleshooting guide and backup/restore operational boundaries (PITR and automated snapshots).
+- **Initial Administrator Provisioning Script**:
+  - Created `apps/api/prisma/seed-admin.ts` and registered `pnpm db:admin` (`pnpm --filter @darb/api prisma:admin`).
+  - Securely provisions root platform administrator using Argon2id password hashing based on `INITIAL_ADMIN_PASSWORD` (minimum 12 characters) without seeding test data or dummy accounts.
+- **Verification**:
+  - Prisma schema validated (`prisma validate`).
+  - Prisma migration status verified against test database (7 migrations applied, schema up to date).
+  - Admin provisioning script tested for success and safe rejection upon missing password.
+  - Full automated test suite (171 tests), TypeScript typecheck, and ESLint all 100% passing.
+  - P6-004 through P6-006 confirmed as `NOT_STARTED`.
+
+---
+
 ## 2026-11-01 — Phase 6 — P6-002: Pilot Workflow Acceptance Suite
 
 ### Summary

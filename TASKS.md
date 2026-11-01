@@ -271,7 +271,7 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 6 — Pilot Readiness & Production Hardening
-- **Phase Status**: `IN_PROGRESS` (P6-001 and P6-002 completed; P6-003 through P6-006 pending)
+- **Phase Status**: `IN_PROGRESS` (P6-001, P6-002, and P6-003 completed; P6-004 through P6-006 pending)
 
 - [x] **P6-001 — Production Configuration & Deployment Readiness Audit**
   - **Status**: `TESTED`
@@ -285,10 +285,26 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Acceptance**: Complete student and teacher journeys automated across 2 teachers (Ahmed & Layla) and 5 students (Tariq, Sara, Omar, Mona, Zain) under multi-tenant PostgreSQL Row-Level Security (RLS). 43 automated tests across 7 comprehensive workflows: Authentication & Session Persistence (cookie persistence, logout, invalid token rejection, username login), Teacher & Course Setup (course lifecycle, sections, lessons, publishing, join-code generation and revocation), Student Enrollment & Learning Journey (code redemption, exhaustion, revocation, curriculum navigation omitting drafts, lesson progress marking), Assignments & Manual Grading (publishing, submission, duplicate rejection, score bounds, teacher grading, atomic `GradeRecord`), Timed MCQ Exams & Auto-Grading (exam creation, server-enforced countdown timer, `isCorrect` stripping, incremental answer saving, auto-grading engine, GradeRecord sync), Course Roster & Authorization (teacher roster access, cross-tenant 404, student 403, unauthenticated 401), and Cross-Tenant Isolation & RLS (strict cross-tenant isolation on courses, sections, assignments, and exams). All 171 repository tests passing (146 E2E, 27 unit).
   - **File Paths**: `apps/api/test/pilot-workflow-acceptance.e2e-spec.ts`
 
-- [ ] **P6-003 — Production Deployment Playbook & Managed DB Runbook**
+- [x] **P6-003 — Production Deployment Playbook & Managed DB Runbook**
+  - **Status**: `TESTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Authoritative production deployment playbook and managed PostgreSQL runbook covering runtime versions (Node.js 18/20 LTS, pnpm 12, PostgreSQL 16), DNS and HTTPS topologies (shared apex, path-routed, distinct apex), reverse proxy architecture, environment variable matrix, secret provisioning, CORS & cookie security, dual-role database security (`darb_migrator` DDL owner vs `darb_app` unprivileged DML role with `NOSUPERUSER NOBYPASSRLS`), PostgreSQL Row-Level Security (RLS) enforcement verification queries, transaction-mode connection pooling (PgBouncer/Supavisor), SSL/TLS connectivity, Prisma migration lifecycle (`prisma migrate deploy`), safe zero-downtime schema evolution (expand-contract pattern), application vs database rollback procedures, and automated initial administrator provisioning script (`pnpm db:admin`). Backup and restore operational boundaries documented.
+  - **File Paths**: `docs/operations/DEPLOYMENT_PLAYBOOK.md`, `docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`, `apps/api/prisma/seed-admin.ts`, `apps/api/package.json`, `package.json`, `docs/architecture/deployment-and-storage.md`
+
+- [ ] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
   - **Status**: `NOT_STARTED`
   - **Dependencies**: P6-001
-  - **Acceptance**: Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; secret rotation guidelines.
+  - **Acceptance**: Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider.
+
+- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
+
+- [ ] **P6-006 — Operational Pilot Readiness Sign-off**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-002 through P6-005
+  - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers.
 
 - [ ] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
   - **Status**: `NOT_STARTED`

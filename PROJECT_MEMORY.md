@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (P6-001 and P6-002 completed; P6-003 through P6-006 NOT_STARTED).
-- **Current Status**: **P6-002 TESTED & VERIFIED**. Pilot workflow acceptance suite completed (43 tests, 7 workflows, 2 teachers, 5 students). All 171 automated tests passing across the repository (146 E2E, 27 unit).
+- **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (P6-001, P6-002, and P6-003 completed; P6-004 through P6-006 NOT_STARTED).
+- **Current Status**: **P6-003 TESTED & VERIFIED**. Production deployment playbook and managed PostgreSQL runbook authored, initial admin provisioning script (`pnpm db:admin`) implemented and verified. All 171 automated tests passing across the repository (146 E2E, 27 unit).
 
 ---
 
@@ -65,6 +65,7 @@ This document serves as the single source of truth for the project state, verifi
 | **Exams & Auto-Grading** | `TESTED` | `apps/api/src/modules/exams/*`, `teacher-exams-tab.tsx`, `student-exams-view.tsx` | Multiple-choice exam creation, questions with single correct answer, server-enforced countdown timer, `isCorrect` stripped from student payload, real-time incremental answer saving, auto-grading engine, GradeRecord synchronization with best score retention, post-submission review. | None. | `phase5-exams-and-auto-grading.e2e-spec.ts` (20 tests) — ALL PASS |
 | **Production Configuration & Deployment Readiness (P6-001)** | `TESTED` | `env.validation.ts`, `main.ts`, `.dockerignore`, `Dockerfile.api`, `Dockerfile.web`, `docker-compose.yml` | Strict production startup validation (rejecting insecure secrets, default DB credentials, missing HTTPS cookie flag); production CORS hardening (removing hardcoded localhost); toggleable Swagger (`ENABLE_SWAGGER`); secure cookie invalidation; container non-root execution (`USER node`) and built-in healthchecks; root `.dockerignore`. | P6-002 through P6-006 (pending). | `env.validation.spec.ts` (10 tests), all 128 monorepo tests — ALL PASS |
 | **Pilot Workflow Acceptance Suite (P6-002)** | `TESTED` | `apps/api/test/pilot-workflow-acceptance.e2e-spec.ts` | 43 automated acceptance tests covering 7 end-to-end pilot workflows across 2 teachers (Ahmed & Layla) and 5 students (Tariq, Sara, Omar, Mona, Zain) under multi-tenant RLS: auth persistence, course setup, enrollment, assignments, exams, roster, cross-tenant isolation. | P6-003 through P6-006 (pending). | `pilot-workflow-acceptance.e2e-spec.ts` (43 tests), full E2E suite (146 tests) — ALL PASS |
+| **Production Deployment Playbook & Managed DB Runbook (P6-003)** | `TESTED` | `docs/operations/DEPLOYMENT_PLAYBOOK.md`, `docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`, `seed-admin.ts` | Authoritative deployment guide and managed DB runbook covering topology, runtime versions, DNS/HTTPS, env vars, CORS/cookie security, dual-role least privilege (`darb_migrator` DDL vs `darb_app` DML), PostgreSQL RLS audit queries, transaction-mode poolers, safe zero-downtime migrations (expand-contract), rollback limitations, and secure initial admin provisioning script. | P6-004 through P6-006 (pending). | `prisma validate`, `prisma migrate status`, admin script tests, full test suite — ALL PASS |
 
 ---
 
@@ -72,11 +73,11 @@ This document serves as the single source of truth for the project state, verifi
 
 - **Last Completed Phase**: Pre-Phase-6 Audit & Bug Fixes (`COMPLETED`).
 - **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (`IN_PROGRESS`).
-- **Last Completed Task**: P6-002 — Pilot Workflow Acceptance Suite (`TESTED`).
-- **Current Task**: Completed P6-002 pilot workflow acceptance testing across all Phase 1–5 features.
-- **Next Recommended Task**: P6-003 — Production Deployment Playbook & Managed DB Runbook.
+- **Last Completed Task**: P6-003 — Production Deployment Playbook & Managed DB Runbook (`TESTED`).
+- **Current Task**: Completed P6-003 documentation, runbooks, and admin provisioning script.
+- **Next Recommended Task**: P6-004 — Managed Object Storage (S3/R2) Cloud Integration.
 - **Blocking Issues**: None.
-- **Decisions Requiring Approval**: None.
+- **Decisions Requiring Approval**: Cloud hosting provider selection (AWS / Neon / Railway / Hetzner) and apex domain registration.
 
 ---
 
@@ -104,4 +105,4 @@ This document serves as the single source of truth for the project state, verifi
    - E2E Tests: `pnpm --filter @darb/api test:e2e` (146 tests across 7 suites)
    - Unit Tests: `pnpm test` (27 tests: 25 api, 2 web)
    - Monorepo Build: `pnpm build`
-4. **Next Phase**: Phase 6 — Pilot Readiness & Production Hardening (P6-003: Production Deployment Playbook & Managed DB Runbook).
+4. **Next Phase**: Phase 6 — Pilot Readiness & Production Hardening (P6-004: Managed Object Storage (S3/R2) Cloud Integration).

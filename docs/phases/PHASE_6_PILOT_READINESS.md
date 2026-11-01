@@ -1,7 +1,7 @@
 # Phase 6 Report — Pilot Readiness & Production Hardening
 
 - **Phase Objective**: Complete comprehensive production configuration audit, end-to-end acceptance testing for the 2–5 teacher pilot, harden managed cloud deployment playbooks, and finalize operational monitoring.
-- **Current Phase Status**: `IN_PROGRESS` (P6-001 and P6-002 TESTED; P6-003 through P6-006 NOT_STARTED)
+- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, and P6-003 TESTED; P6-004 through P6-006 NOT_STARTED)
 - **Prerequisites**: Phases 1 through 5, Pre-Phase-6 Audit
 
 ---
@@ -12,7 +12,7 @@
 |---|---|---|---|
 | `P6-001` | Production Configuration & Deployment Readiness Audit | Audit environment variables, implement strict production startup validation, eliminate hardcoded development origins from CORS, harden cookie deletion, create root `.dockerignore`, enforce non-root container execution, and add production config tests. | `TESTED` |
 | `P6-002` | Pilot Workflow Acceptance Suite | Complete student and teacher journeys automated across 2 teachers and 5 students under multi-tenant RLS. | `TESTED` |
-| `P6-003` | Production Deployment Playbook | Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; secret rotation guidelines. | `NOT_STARTED` |
+| `P6-003` | Production Deployment Playbook & Managed DB Runbook | Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; dual-role least-privilege setup; deployment and rollback procedures; initial admin provisioning. | `TESTED` |
 | `P6-004` | Managed Object Storage (S3/R2) Cloud Integration | Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider. | `NOT_STARTED` |
 | `P6-005` | Monitoring, Alerting & Health Probes Hardening | Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization. | `NOT_STARTED` |
 | `P6-006` | Operational Pilot Readiness Sign-off | Final operational checklist validation for the pilot launch with 2–5 teachers. | `NOT_STARTED` |
@@ -121,3 +121,42 @@
 - Full monorepo build: `pnpm build` -> **PASS** (contracts, api, web).
 - Typecheck & Lint: `pnpm typecheck && pnpm lint` -> **PASS** (0 errors, 0 warnings).
 - **Status of P6-003 through P6-006**: Confirmed `NOT_STARTED`.
+
+---
+
+## 4. Work Completed (P6-003: Production Deployment Playbook & Managed DB Runbook)
+
+### 4.1 Production Deployment Playbook (`docs/operations/DEPLOYMENT_PLAYBOOK.md`)
+- Authoritative guide covering:
+  - Supported runtime and prerequisites: Node.js 18/20 LTS, pnpm 12, PostgreSQL 16.
+  - DNS & HTTPS topologies: Subdomains with shared apex (recommended), single domain path routing, and distinct apex domains with respective cookie flags.
+  - Reverse proxy and service topology for `@darb/web` (Next.js SSR, port 3000) and `@darb/api` (NestJS REST, port 4000).
+  - Complete environment variable dictionary for API and Web services with production security rules.
+  - Secret provisioning best practices without committing credentials.
+  - Deployment ordering: Database Migration -> API deployment -> Readiness verification (`/api/v1/health/ready`) -> Web frontend deployment.
+  - Post-deployment smoke tests covering health, CORS headers, cookie attributes, and invalid credential rate limiting.
+  - Rollback procedures distinguishing application-only rollbacks from database schema evolution (Expand-Contract principle) and prohibiting blind database snapshot restoration over active writes.
+
+### 4.2 Managed PostgreSQL Runbook (`docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`)
+- Authoritative guide covering:
+  - Dual database role model: `darb_migrator` (DDL schema owner, `DATABASE_URL`) vs `darb_app` (DML only, `NOSUPERUSER NOBYPASSRLS`, `APP_DATABASE_URL`).
+  - Idempotent SQL script for provisioning managed PostgreSQL databases and roles.
+  - PostgreSQL Row-Level Security (RLS) operational model: `FORCE ROW LEVEL SECURITY`, transaction-scoped `SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`.
+  - SQL verification queries auditing RLS enforcement across all tenant tables in `pg_class`.
+  - Connection pooling: 100% compatibility with transaction-mode poolers (PgBouncer, Supavisor); separation of direct port 5432 for Prisma migrations.
+  - SSL/TLS connection parameters (`sslmode=require`).
+  - Migration deployment workflow (`prisma migrate deploy`, `prisma migrate status`) and disaster prevention rules.
+  - Database connectivity troubleshooting guide.
+  - Backup & restore operational boundaries: PITR and snapshot dependencies specified without falsely claiming live cloud restore execution.
+
+### 4.3 Initial Administrator Provisioning Script
+- Created `apps/api/prisma/seed-admin.ts` and registered `pnpm db:admin` (`pnpm --filter @darb/api prisma:admin`).
+- Reads `INITIAL_ADMIN_PASSWORD` (minimum 12 chars), hashes with Argon2id, and upserts the root admin account without seeding any development fixtures or test courses.
+
+### 4.4 Verification & Status
+- Prisma schema validation (`prisma validate`): Valid.
+- Prisma migration status (`prisma migrate status`): Up to date (7 applied migrations).
+- Admin script verification: Successfully creates admin; fails safely with exit code 1 when password is missing or < 12 chars.
+- Full verification: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` all pass.
+- P6-004, P6-005, P6-006 confirmed as `NOT_STARTED`.
+
