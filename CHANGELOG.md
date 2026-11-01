@@ -4,6 +4,25 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 7 — P7-001: Production Deployment Discovery & Execution Planning
+
+### Summary
+- Audited the completed DARB codebase and verified that all Phase 6 deliverables (`P6-001` through `P6-006`) are verified with 237 passing tests (183 E2E across 10 suites, 54 unit across 8 suites) and zero build, lint, or typecheck errors.
+- **Production Deployment Readiness Assessment**:
+  - Assessed 6 core operational domains: Application Hosting, Managed PostgreSQL, Managed Object Storage, Security Architecture, Observability, and Pilot Operations.
+  - Recommended **Option B: Reverse Proxy Path Routing** (`https://darb.example.com` for web, `/api/v1` for API) as the optimal hosting topology, eliminating cross-origin complexity, third-party cookie restrictions, and multiple TLS certificate overhead.
+  - Evaluated hosting tiers (Tier 1 Managed PaaS e.g. Railway/Render vs Tier 2 VPS with Caddy vs Tier 3 AWS ECS/RDS/S3).
+- **Gaps, Risks & Blockers Analysis**:
+  - Classified all operational findings into `READY`, `PARTIAL`, `MISSING`, or `BLOCKED`.
+  - Identified external blockers requiring operator action: cloud PostgreSQL provisioning, S3/R2 storage bucket creation, and domain/DNS registration.
+  - Identified immediate pre-deployment refinements for P7-002: `.env.example` storage documentation update, optional `COOKIE_DOMAIN` support, and optional `METRICS_AUTH_TOKEN` gating for public ingress.
+- **Phase 7 Execution Roadmap**:
+  - Authored authoritative Phase 7 deployment plan in `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`.
+  - Established dependency-ordered 6-task breakdown (`P7-001` through `P7-006`).
+  - Recorded `P7-001` as `TESTED`. Phase 7 marked `IN_PROGRESS`.
+
+---
+
 ## 2026-11-01 — Phase 6 — P6-006: Operational Pilot Readiness Sign-off & Phase 6 Completion
 
 ### Summary

@@ -23,8 +23,8 @@ This document serves as the single source of truth for the project state, verifi
   - **Database & ORM**: PostgreSQL 16, Prisma ORM 5.22, version-controlled migrations, PostgreSQL RLS (`SET LOCAL app.current_tenant_id` and `SET LOCAL app.bypass_rls`).
   - **Security**: Argon2id password hashing (`@node-rs/argon2`), HTTP-only `SameSite=Lax` cookies, rate limiting, audit logging.
   - **Tooling & Monorepo**: `pnpm@12` workspaces, Jest, Supertest, ESLint, Prettier, Docker Compose.
-- **Current Phase**: Phase 6 — Pilot Readiness & Production Hardening (`COMPLETED`).
-- **Current Status**: **P6-006 TESTED & VERIFIED — PHASE 6 COMPLETED**. Completed final operational pilot readiness sign-off. Automated CLI readiness gate verification tool (`pnpm pilot:verify`) audits DB, forced RLS across all 7 tenant tables, pilot demographics (2 teachers, 5 students), root admin presence, storage provider, and session secret invariants. Executable E2E pilot readiness gate test suite (`apps/api/test/pilot-readiness-gate.e2e-spec.ts`, 13 tests) validates production configuration invariants, forced RLS, authentication lifecycle, core educational workflows, S3/R2 storage, health probes (`/live`, `/ready`, `/dependencies`), and Prometheus metrics. Operational sign-off document (`PILOT_READINESS_SIGN_OFF.md`) formalizes Day 0 deployment sequence and launch boundaries. All 237 automated tests passing across the repository (183 E2E, 54 unit). Ready for pilot launch.
+- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS`).
+- **Current Status**: **P7-001 TESTED & VERIFIED**. Completed repository audit, 6-domain deployment readiness assessment, gap/risk classification, and hosting architecture evaluation. Recommended Reverse Proxy Path Routing topology (Option B). Authored authoritative Phase 7 deployment plan in `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`. All 237 automated tests passing across the repository (183 E2E, 54 unit). P7-002 (configuration harmonization & ingress hardening) ready to execute. Cloud infrastructure provisioning (P7-003) blocked on external provider credentials.
 
 ---
 
@@ -69,18 +69,19 @@ This document serves as the single source of truth for the project state, verifi
 | **Managed Object Storage (S3/R2 Cloud Integration) (P6-004)** | `TESTED` | `s3-storage.provider.ts`, `local-storage.provider.ts`, `files.service.ts`, `files.controller.ts`, `OBJECT_STORAGE_RUNBOOK.md` | Provider-neutral storage architecture for AWS S3 and Cloudflare R2; `@aws-sdk/client-s3` integration; SigV4 presigned URLs (900s upload, 300s download); HeadObject verification; `storageProvider` column on `FileObject` with migration under RLS; metadata API endpoint; comprehensive test coverage. | None. | `s3-storage.provider.spec.ts` (6 tests), `phase6-object-storage.e2e-spec.ts` (14 tests), full suite (198 tests) — ALL PASS |
 | **Monitoring, Alerting & Health Probes Hardening (P6-005)** | `TESTED` | `health.controller.ts`, `health.service.ts`, `metrics.service.ts`, `http-logging.interceptor.ts`, `redaction.util.ts`, `MONITORING_AND_ALERTING_RUNBOOK.md` | Three distinct health probes (`/live`, `/ready`, `/dependencies`); in-memory operational metrics (`/metrics`) in JSON and Prometheus exposition format; route template normalization for cardinality protection; production single-line JSON logging with `X-Request-Id` correlation; automated data redaction; operational runbook with 7 alert definitions and triage commands. | None. | `redaction.util.spec.ts` (9 tests), `metrics.service.spec.ts` (3 tests), `health.service.spec.ts` (3 tests), `phase6-monitoring.e2e-spec.ts` (10 tests), full suite (224 tests) — ALL PASS |
 | **Operational Pilot Readiness Sign-off (P6-006)** | `TESTED` | `verify-pilot-readiness.ts`, `pilot-readiness-gate.e2e-spec.ts`, `PILOT_READINESS_SIGN_OFF.md` | Automated CLI readiness checker (`pnpm pilot:verify`), 13 E2E readiness tests validating all 6 gates (prod invariants, forced RLS on all 7 tables, student username auth, course/curriculum workflow, S3/R2 presigning, health & metrics), authoritative sign-off documentation. | None (Phase 6 Complete). | `pilot:verify` -> GATE PASSED, `pilot-readiness-gate.e2e-spec.ts` (13 tests), full suite (237 tests) — ALL PASS |
+| **Production Deployment Discovery & Planning (P7-001)** | `TESTED` | `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md` | Audited repository and documentation; assessed 6 operational deployment domains; classified gaps/blockers; evaluated hosting tiers; recommended Reverse Proxy Path Routing; defined P7-001 through P7-006 roadmap. | P7-002 through P7-006. | Documentation and assessment verified against live repository |
 
 ---
 
 ## D. Current Position
 
 - **Last Completed Phase**: Phase 6 — Pilot Readiness & Production Hardening (`COMPLETED`).
-- **Current Phase**: Phase 6 — Complete. System ready for Pilot Launch.
-- **Last Completed Task**: P6-006 — Operational Pilot Readiness Sign-off (`TESTED`).
-- **Current Task**: Completed P6-006 gate verification, test suite, and sign-off documentation.
-- **Next Recommended Task**: Deploy to staging / production environment following `DEPLOYMENT_PLAYBOOK.md` and execute Day 0 pilot onboarding.
-- **Blocking Issues**: None.
-- **Decisions Requiring Approval**: Cloud hosting provider selection (AWS / Neon / Railway / Hetzner) and apex domain registration.
+- **Current Phase**: Phase 7 — Production Deployment & Controlled Pilot Launch (`IN_PROGRESS`).
+- **Last Completed Task**: P7-001 — Production Deployment Discovery & Execution Planning (`TESTED`).
+- **Current Task**: Completed P7-001 discovery, gap audit, and Phase 7 execution roadmap.
+- **Next Recommended Task**: P7-002 — Production Configuration Harmonization & Ingress Hardening (update `.env.example`, optional `COOKIE_DOMAIN`, optional `METRICS_AUTH_TOKEN`).
+- **Blocking Issues**: P7-003 through P7-006 require external cloud provider credentials, managed PostgreSQL provisioning, and domain registration.
+- **Decisions Requiring Approval**: Hosting tier selection (Tier 1 PaaS e.g. Railway/Render vs Tier 2 VPS with Caddy) and domain registration.
 
 ---
 

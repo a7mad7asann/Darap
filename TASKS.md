@@ -308,3 +308,44 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Dependencies**: P6-002 through P6-005
   - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers. Implemented automated CLI readiness gate checker (`pnpm pilot:verify`) validating DB connection, forced RLS on all 7 tenant tables in `pg_class`, pilot demographic personas (2 teachers, 5 students), root admin presence, storage provider config, and session secret invariants. Implemented 13-test automated E2E gate suite (`apps/api/test/pilot-readiness-gate.e2e-spec.ts`) asserting production config invariants, forced RLS, student username-only auth, cookie lifecycle, course & curriculum workflows, S3/R2 presigned upload flow, distinct health probes (`/live`, `/ready`, `/dependencies`), Prometheus metrics (`/metrics`), and log redaction. Authored authoritative operational sign-off document `docs/operations/PILOT_READINESS_SIGN_OFF.md` declaring pilot readiness. Monorepo builds clean, 0 lint/typecheck errors, 237/237 automated tests passing.
   - **File Paths**: `apps/api/scripts/verify-pilot-readiness.ts`, `apps/api/test/pilot-readiness-gate.e2e-spec.ts`, `docs/operations/PILOT_READINESS_SIGN_OFF.md`, `package.json`, `apps/api/package.json`
+
+---
+
+## Phase 7 — Production Deployment & Controlled Pilot Launch
+- **Phase Status**: `IN_PROGRESS` (P7-001 completed; P7-002 through P7-006 planned)
+
+- [x] **P7-001 — Production Deployment Discovery & Execution Planning**
+  - **Status**: `TESTED`
+  - **Dependencies**: P6-006
+  - **Acceptance**: Comprehensive audit of the completed DARB codebase and documentation; readiness assessment across application hosting, managed PostgreSQL, managed object storage, security, observability, and pilot operations; identification and classification of gaps, operational risks, and external blockers; evaluation of hosting topologies and recommendation of reverse proxy path routing (Option B); dependency-ordered Phase 7 execution breakdown; authored authoritative Phase 7 report in `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`.
+  - **File Paths**: `docs/phases/PHASE_7_PRODUCTION_DEPLOYMENT.md`, `TASKS.md`, `PROJECT_MEMORY.md`, `CHANGELOG.md`
+
+- [ ] **P7-002 — Production Configuration Harmonization & Ingress Hardening**
+  - **Status**: `READY_TO_EXECUTE`
+  - **Dependencies**: P7-001
+  - **Acceptance**: Update `.env.example` to document `STORAGE_*` keys and remove obsolete `S3_*` comments; add optional `COOKIE_DOMAIN` support in `auth.controller.ts`; add optional `METRICS_AUTH_TOKEN` protection to `/api/v1/health/metrics` in `health.controller.ts`; verify full test suite passes.
+  - **File Paths**: `.env.example`, `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/health/health.controller.ts`
+
+- [ ] **P7-003 — Managed Cloud Infrastructure Provisioning & Secrets Binding**
+  - **Status**: `BLOCKED` (Requires external credentials & infrastructure decisions)
+  - **Dependencies**: P7-002
+  - **Acceptance**: Provision Managed PostgreSQL 16 (AWS RDS / Neon / Supabase), provision private S3/R2 storage bucket with CORS, configure apex domain and DNS A/CNAME records, securely bind production environment secrets without committing credentials.
+  - **File Paths**: External cloud provider dashboards / CLI
+
+- [ ] **P7-004 — Production Database Role Setup & Migration Execution**
+  - **Status**: `BLOCKED` (Depends on P7-003)
+  - **Dependencies**: P7-003
+  - **Acceptance**: Execute dual-role setup script (`darb_migrator` / `darb_app`) on production PostgreSQL; deploy Prisma migrations (`prisma migrate deploy`); audit forced RLS across all 7 tenant tables in `pg_class`; provision root administrator account via `pnpm db:admin`.
+  - **File Paths**: `docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`, `apps/api/prisma/seed-admin.ts`
+
+- [ ] **P7-005 — Application Deployment & Domain / Ingress Verification**
+  - **Status**: `BLOCKED` (Depends on P7-003, P7-004)
+  - **Dependencies**: P7-003, P7-004
+  - **Acceptance**: Deploy `@darb/api` and `@darb/web` containers; configure reverse proxy routing and automatic TLS certificates; verify liveness (`/health/live`), readiness (`/health/ready`), and dependency (`/health/dependencies`) probes over public HTTPS.
+  - **File Paths**: Ingress configuration, `DEPLOYMENT_PLAYBOOK.md`
+
+- [ ] **P7-006 — Production Smoke Tests & Controlled Pilot Launch**
+  - **Status**: `BLOCKED` (Depends on P7-005)
+  - **Dependencies**: P7-005
+  - **Acceptance**: Execute live smoke tests against production HTTPS; test real file upload/download via S3/R2; onboard 2–5 pilot teachers via `/admin`; verify course creation, join-code redemption, assignments, and exam flows; sign off on controlled pilot launch.
+  - **File Paths**: `docs/operations/PILOT_READINESS_SIGN_OFF.md`, `apps/api/test/pilot-readiness-gate.e2e-spec.ts`
