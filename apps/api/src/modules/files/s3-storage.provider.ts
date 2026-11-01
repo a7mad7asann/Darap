@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  HeadBucketCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -12,6 +13,7 @@ import {
   ObjectMetadataResult,
   PresignedDownloadResult,
   PresignedUploadResult,
+  StorageHealthResult,
   StorageProvider,
 } from './storage.provider';
 
@@ -201,6 +203,42 @@ export class S3StorageProvider implements StorageProvider {
       }
       this.logger.error(`Error fetching object metadata for key: ${storageKey}`, error);
       throw error;
+    }
+  }
+
+  async checkHealth(): Promise<StorageHealthResult> {
+    const start = Date.now();
+    try {
+      if (!this.bucket) {
+        return {
+          status: 'degraded',
+          provider: this.providerName,
+          latencyMs: Date.now() - start,
+          details: { error: 'Bucket not configured' },
+        };
+      }
+
+      const command = new HeadBucketCommand({ Bucket: this.bucket });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Storage health check timeout')), 3000),
+      );
+
+      await Promise.race([this.s3Client.send(command), timeoutPromise]);
+
+      return {
+        status: 'up',
+        provider: this.providerName,
+        latencyMs: Date.now() - start,
+        details: { bucket: this.bucket },
+      };
+    } catch (err: any) {
+      this.logger.warn(`Storage health check degraded: ${err.message}`);
+      return {
+        status: 'degraded',
+        provider: this.providerName,
+        latencyMs: Date.now() - start,
+        details: { message: 'Storage connectivity degraded or inaccessible' },
+      };
     }
   }
 }

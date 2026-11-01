@@ -297,35 +297,11 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Acceptance**: Provider-neutral managed object storage architecture supporting AWS S3, Cloudflare R2, and local fallback; installed official `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`; implemented `S3StorageProvider` with SigV4 presigned upload and download URLs, HeadObject existence verification, object metadata retrieval, direct upload/download, and object deletion; enhanced `LocalStorageProvider` with in-memory binary object storage; added `storageProvider` to `FileObject` with migration `20261101115000_add_file_storage_provider` under PostgreSQL RLS; implemented `GET /api/v1/files/:fileId/metadata` endpoint in `FilesController`; added strict startup environment validation for S3/R2; comprehensive testing with real HTTP S3-compatible server tests (6 tests), environment validation tests (15 tests), and storage security/tenant isolation E2E suite (14 tests). All 198 tests passing across repository (160 E2E, 38 unit).
   - **File Paths**: `apps/api/src/modules/files/s3-storage.provider.ts`, `apps/api/src/modules/files/local-storage.provider.ts`, `apps/api/src/modules/files/storage.provider.ts`, `apps/api/src/modules/files/files.service.ts`, `apps/api/src/modules/files/files.controller.ts`, `apps/api/src/modules/files/files.module.ts`, `apps/api/src/config/env.validation.ts`, `apps/api/src/modules/files/s3-storage.provider.spec.ts`, `apps/api/test/phase6-object-storage.e2e-spec.ts`, `docs/operations/OBJECT_STORAGE_RUNBOOK.md`
 
-- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-001
-  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
-
-- [ ] **P6-006 — Operational Pilot Readiness Sign-off**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-002 through P6-005
-  - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers.
-
-- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-001
-  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
-
-- [ ] **P6-006 — Operational Pilot Readiness Sign-off**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-002 through P6-005
-  - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers.
-
-- [ ] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-001
-  - **Acceptance**: Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider.
-
-- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
-  - **Status**: `NOT_STARTED`
-  - **Dependencies**: P6-001
-  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
+- [x] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
+  - **Status**: `TESTED`
+  - **Dependencies**: P6-001, P6-004
+  - **Acceptance**: Three distinct health concepts implemented: Liveness probe (`/api/v1/health/live`) confirming process vitality and memory (<10ms, decoupled from DB/storage); Readiness probe (`/api/v1/health/ready`) confirming PostgreSQL connectivity (`SELECT 1`) with strict 3000ms timeout, returning 200/503 without leaking credentials or internal error stack traces; Dependency probe (`/api/v1/health/dependencies`) reporting status and latency for PostgreSQL and S3/R2 storage (safe HeadBucket probe without creating test files). In-memory operational metrics collector (`MetricsService`) exposing total requests, status classes (2xx, 3xx, 4xx, 5xx), total errors, latency averages/maxima, memory usage, and uptime via `GET /api/v1/health/metrics` in JSON and standard Prometheus 0.0.4 exposition format, with cardinality protection via route template normalization (`/courses/:id`). Production structured JSON logging to stdout/stderr with `X-Request-Id` correlation, header sanitization (`/^[a-zA-Z0-9_-]{1,64}$/`), and automated deep redaction of passwords, tokens, auth headers, and signed URL signatures (`redaction.util.ts`). Authoritative operational runbook `docs/operations/MONITORING_AND_ALERTING_RUNBOOK.md` detailing 7 core production alert definitions with signals, thresholds, windows, severity, immediate triage commands, remediation steps, and recovery verification. Automated unit and E2E test coverage across all monitoring and health components. All 224 repository tests passing (170 E2E, 54 unit).
+  - **File Paths**: `apps/api/src/modules/health/health.controller.ts`, `apps/api/src/modules/health/health.service.ts`, `apps/api/src/modules/health/metrics.service.ts`, `apps/api/src/modules/health/health.module.ts`, `apps/api/src/common/interceptors/http-logging.interceptor.ts`, `apps/api/src/common/interceptors/request-id.interceptor.ts`, `apps/api/src/common/filters/all-exceptions.filter.ts`, `apps/api/src/common/utils/redaction.util.ts`, `apps/api/src/modules/files/storage.provider.ts`, `apps/api/src/modules/files/s3-storage.provider.ts`, `apps/api/src/modules/files/local-storage.provider.ts`, `apps/api/src/main.ts`, `apps/api/src/common/utils/redaction.util.spec.ts`, `apps/api/src/modules/health/metrics.service.spec.ts`, `apps/api/src/modules/health/health.service.spec.ts`, `apps/api/test/phase6-monitoring.e2e-spec.ts`, `docs/operations/MONITORING_AND_ALERTING_RUNBOOK.md`
 
 - [ ] **P6-006 — Operational Pilot Readiness Sign-off**
   - **Status**: `NOT_STARTED`

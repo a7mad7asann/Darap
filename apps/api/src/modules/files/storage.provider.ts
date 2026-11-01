@@ -17,6 +17,13 @@ export interface ObjectMetadataResult {
   lastModified?: Date;
 }
 
+export interface StorageHealthResult {
+  status: 'up' | 'degraded' | 'down';
+  provider: string;
+  latencyMs: number;
+  details?: Record<string, unknown>;
+}
+
 export abstract class StorageProvider {
   abstract readonly providerName: string;
 
@@ -42,4 +49,6 @@ export abstract class StorageProvider {
   ): Promise<{ storageKey: string; byteSize: number }>;
 
   abstract getObjectMetadata(storageKey: string): Promise<ObjectMetadataResult>;
+
+  abstract checkHealth(): Promise<StorageHealthResult>;
 }

@@ -58,5 +58,19 @@ The `FileObject` model in `schema.prisma` already includes:
 For step-by-step production setup, managed database configuration, deployment sequences, and rollback runbooks, refer to:
 - [Production Deployment Playbook](../operations/DEPLOYMENT_PLAYBOOK.md)
 - [Managed PostgreSQL Runbook & RLS Operational Guide](../operations/MANAGED_POSTGRESQL_RUNBOOK.md)
+- [Managed Object Storage (S3/R2) Runbook](../operations/OBJECT_STORAGE_RUNBOOK.md)
+- [Monitoring, Alerting & Health Probes Runbook](../operations/MONITORING_AND_ALERTING_RUNBOOK.md)
+
+---
+
+## 5. Observability & Health Monitoring Strategy
+
+DARB enforces three isolated health concepts to support zero-downtime rolling deployments, automated container healing, and incident detection:
+
+1. **Liveness Probe (`/api/v1/health/live`)**: Ultra-lightweight process vitality check (<10ms). Uncoupled from database or network I/O.
+2. **Readiness Probe (`/api/v1/health/ready`)**: Traffic gatekeeper testing database connectivity (`SELECT 1`) with strict 3s timeout. Never leaks credentials or connection errors.
+3. **Dependency Probe (`/api/v1/health/dependencies`)**: Deep backing status checking PostgreSQL and S3/R2 storage connectivity without writing test objects.
+4. **Operational Metrics (`/api/v1/health/metrics`)**: In-memory request counters, status classes, latency summaries, and memory usage. Emitted as JSON or Prometheus format. Route templates are strictly normalized (cardinality protection).
+5. **Structured JSON Logging**: Emitted to `stdout` in production with mandatory `X-Request-Id` correlation and automated data redaction.
 - [Managed Object Storage (S3 / Cloudflare R2) Runbook](../operations/OBJECT_STORAGE_RUNBOOK.md)
 

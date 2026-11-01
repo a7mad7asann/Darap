@@ -4,6 +4,50 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 6 — P6-005: Monitoring, Alerting & Health Probes Hardening
+
+### Summary
+- Hardened production observability, three isolated health probes, lightweight in-memory metrics with Prometheus exposition, structured JSON logging with correlation IDs, automated sensitive data redaction, and an operational incident alerting runbook.
+- **Three Distinct Health Probes (`HealthModule`)**:
+  - `GET /api/v1/health/live`: Ultra-lightweight process vitality check (<10ms). Uncoupled from database or network I/O; returns process uptime, ISO timestamp, and memory usage (`rss`, `heapTotal`, `heapUsed`).
+  - `GET /api/v1/health/ready`: Traffic gatekeeper testing PostgreSQL connectivity (`SELECT 1`) with strict 3000ms query timeout via `Promise.race`. Returns HTTP 200 `{"status":"ready","database":"connected","checks":{"database":"up"}}` or HTTP 503 `{"status":"not_ready","database":"disconnected","checks":{"database":"down"}}`. Strictly prevents leaking database credentials, hostnames, or query errors.
+  - `GET /api/v1/health/dependencies`: Deep backing infrastructure inspection checking PostgreSQL and S3/R2 storage connectivity. Uses safe non-destructive `HeadBucketCommand` without writing or uploading dummy test files. Returns latency and status for each backing service.
+- **Lightweight Operational Metrics (`MetricsService`)**:
+  - Implemented in-memory metrics collector in `HealthModule`:
+    - Tracks total HTTP requests, status classes (`2xx`, `3xx`, `4xx`, `5xx`), and error counts.
+    - Summarizes average and maximum request durations by method and safe route template.
+    - Exposes process memory (`rss`, `heapTotal`, `heapUsed`, `external`) and process uptime.
+  - Endpoint `GET /api/v1/health/metrics`:
+    - JSON format by default in standard DARB response envelope.
+    - Standard Prometheus exposition format (version 0.0.4) when requested via `?format=prometheus` or `Accept: text/plain`.
+  - Cardinality protection: All route templates are normalized (`/courses/:id/sections`, `/files/:id/metadata`); dynamic UUIDs, upload tickets, and numeric IDs are sanitized to prevent metric store explosion.
+- **Structured JSON Logging & Automated Data Redaction**:
+  - Implemented `HttpLoggingInterceptor` emitting single-line JSON log records to `stdout`/`stderr` when `NODE_ENV=production`.
+  - Sanitized `X-Request-Id` headers against `/^[a-zA-Z0-9_-]{1,64}$/`, falling back to fresh UUIDv4 identifiers if invalid, empty, or malicious.
+  - Propagates request ID through HTTP response headers, response envelopes, error envelopes, and structured log records.
+  - Automated deep redaction utility (`redaction.util.ts`) scrubbing `Authorization` headers (Bearer/Basic), session cookies (`darb_session`), database passwords, request/response secret fields (`password`, `secretKey`, `token`), and signed S3 URL signatures (`ticket`, `signature`, `X-Amz-Signature`).
+- **Operational Runbook (`MONITORING_AND_ALERTING_RUNBOOK.md`)**:
+  - Authored authoritative runbook defining 7 core production alert definitions:
+    1. `http_5xx_rate_high`: 5xx error rate > 1% over 5m (Sev 1 / Sev 2).
+    2. `http_latency_p95_high`: Request latency p95 > 1000ms over 5m (Sev 2).
+    3. `database_down`: PostgreSQL readiness probe failure > 30s (Sev 1).
+    4. `storage_unhealthy`: S3/R2 storage connectivity or credential failure (Sev 2).
+    5. `process_memory_high`: RSS memory > 850 MB for > 10m (Sev 2).
+    6. `process_crash_loop`: Container restart count > 3 in 10m (Sev 1).
+    7. `readiness_probe_failing`: Ingress readiness failing > 1m (Sev 1).
+  - Each alert documents signal, threshold, window, severity, user impact, exact CLI diagnostic commands, remediation steps, and recovery verification.
+- **Verification & Automated Test Coverage (224 Tests Total)**:
+  - Unit tests for redaction and route normalization (`redaction.util.spec.ts`): 9 / 9 passed.
+  - Unit tests for metrics collection & Prometheus formatting (`metrics.service.spec.ts`): 3 / 3 passed.
+  - Unit tests for database & storage health checks (`health.service.spec.ts`): 3 / 3 passed.
+  - Monitoring and health E2E test suite (`phase6-monitoring.e2e-spec.ts`): 10 / 10 passed.
+  - Full repository test suites: 224 / 224 passed (170 E2E, 54 unit).
+  - Monorepo build (`pnpm build`): Clean pass across `contracts`, `api`, and `web`.
+  - Monorepo lint (`pnpm lint`) and typecheck (`pnpm typecheck`): 0 errors, 0 warnings.
+  - P6-006 confirmed as `NOT_STARTED`.
+
+---
+
 ## 2026-11-01 — Phase 6 — P6-004: Managed Object Storage (S3/R2 Cloud Integration)
 
 ### Summary

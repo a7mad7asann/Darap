@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { MetricsService } from './modules/health/metrics.service';
 
 async function bootstrap() {
   const logger = new Logger('DARB-API');
@@ -56,8 +57,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Global Interceptors & Filters
+  const metricsService = app.get(MetricsService);
   app.useGlobalInterceptors(new RequestIdInterceptor(), new TransformResponseInterceptor());
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter(metricsService));
 
   // DTO Validation with allowlist
   app.useGlobalPipes(

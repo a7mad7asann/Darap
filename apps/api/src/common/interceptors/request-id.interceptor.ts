@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
+import { sanitizeRequestId } from '../utils/redaction.util';
 
 declare module 'express' {
   interface Request {
@@ -16,11 +16,12 @@ export class RequestIdInterceptor implements NestInterceptor {
     const req = httpContext.getRequest<Request>();
     const res = httpContext.getResponse<Response>();
 
-    const headerId = req.headers['x-request-id'];
-    const requestId = typeof headerId === 'string' && headerId.trim() !== '' ? headerId : uuidv4();
+    const rawHeader = req.headers['x-request-id'];
+    const requestId = sanitizeRequestId(rawHeader);
 
     req.requestId = requestId;
     res.setHeader('x-request-id', requestId);
+    res.setHeader('X-Request-Id', requestId);
 
     return next.handle();
   }

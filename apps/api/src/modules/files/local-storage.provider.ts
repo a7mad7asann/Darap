@@ -4,6 +4,7 @@ import {
   ObjectMetadataResult,
   PresignedDownloadResult,
   PresignedUploadResult,
+  StorageHealthResult,
   StorageProvider,
 } from './storage.provider';
 
@@ -112,6 +113,18 @@ export class LocalStorageProvider implements StorageProvider {
       contentLength: item.size,
       contentType: item.mimeType,
       lastModified: item.updatedAt,
+    };
+  }
+
+  async checkHealth(): Promise<StorageHealthResult> {
+    return {
+      status: 'up',
+      provider: 'local',
+      latencyMs: 0,
+      details: {
+        activeTickets: this.pendingTickets.size,
+        storedObjectsCount: this.storedObjects.size,
+      },
     };
   }
 }

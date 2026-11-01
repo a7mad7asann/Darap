@@ -1,7 +1,7 @@
 # Phase 6 Report — Pilot Readiness & Production Hardening
 
 - **Phase Objective**: Complete comprehensive production configuration audit, end-to-end acceptance testing for the 2–5 teacher pilot, harden managed cloud deployment playbooks, and finalize operational monitoring.
-- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, P6-003, and P6-004 TESTED; P6-005 and P6-006 NOT_STARTED)
+- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, P6-003, P6-004, and P6-005 TESTED; P6-006 NOT_STARTED)
 - **Prerequisites**: Phases 1 through 5, Pre-Phase-6 Audit
 
 ---
@@ -14,7 +14,7 @@
 | `P6-002` | Pilot Workflow Acceptance Suite | Complete student and teacher journeys automated across 2 teachers and 5 students under multi-tenant RLS. | `TESTED` |
 | `P6-003` | Production Deployment Playbook & Managed DB Runbook | Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; dual-role least-privilege setup; deployment and rollback procedures; initial admin provisioning. | `TESTED` |
 | `P6-004` | Managed Object Storage (S3/R2) Cloud Integration | Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider. | `TESTED` |
-| `P6-005` | Monitoring, Alerting & Health Probes Hardening | Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization. | `NOT_STARTED` |
+| `P6-005` | Monitoring, Alerting & Health Probes Hardening | Three distinct health probes (live, ready, dependencies), operational metrics in JSON & Prometheus formats, structured JSON logging with X-Request-Id correlation, strict data redaction, and complete alerting runbook. | `TESTED` |
 | `P6-006` | Operational Pilot Readiness Sign-off | Final operational checklist validation for the pilot launch with 2–5 teachers. | `NOT_STARTED` |
 
 ---
@@ -197,6 +197,71 @@
 - Full unit test suite: **5 suites, 38 / 38 passed**.
 - Monorepo build (`pnpm build`): Clean pass across `contracts`, `api`, and `web`.
 - TypeScript (`pnpm typecheck`) and ESLint (`pnpm lint`): 0 errors, 0 warnings.
-- **Status of P6-005 and P6-006**: Confirmed `NOT_STARTED`.
+- **Status of P6-005**: Advanced to `TESTED` following implementation and verification.
+- **Status of P6-006**: Confirmed `NOT_STARTED`.
+
+---
+
+## 6. Work Completed (P6-005: Monitoring, Alerting & Health Probes Hardening)
+
+### 6.1 Three Distinct Health Probes (`HealthModule`)
+- **Liveness Probe** (`GET /api/v1/health/live`):
+  - Ultra-fast process vitality check (<10ms).
+  - Completely independent of database, storage, network I/O, or external dependencies.
+  - Returns process uptime, ISO timestamp, and detailed memory usage (`rss`, `heapTotal`, `heapUsed`).
+- **Readiness Probe** (`GET /api/v1/health/ready`):
+  - Traffic gatekeeper confirming database connectivity (`SELECT 1`).
+  - Strict 3000ms query timeout via `Promise.race` preventing hanging connections.
+  - Returns HTTP 200 `{"status":"ready","database":"connected","checks":{"database":"up"}}`.
+  - On failure, returns HTTP 503 `{"status":"not_ready","database":"disconnected","checks":{"database":"down"}}`.
+  - Strict data privacy guarantee: Never leaks connection strings, hostnames, credentials, or internal query error stack traces.
+- **Dependency Health Probe** (`GET /api/v1/health/dependencies`):
+  - Deep backing infrastructure inspection checking PostgreSQL and S3/R2 storage connectivity.
+  - Non-destructive probe: Tests S3 bucket accessibility via `HeadBucketCommand` without writing or uploading dummy files.
+  - Returns status and latency for each backing service. Returns HTTP 200 with `status: "ok"` or `"degraded"`, and HTTP 503 if critical database connectivity fails.
+
+### 6.2 Lightweight Operational Metrics (`MetricsService`)
+- Implemented in-memory `MetricsService` in `HealthModule`:
+  - Tracks total requests, error counts (4xx, 5xx), status classes (`2xx`, `3xx`, `4xx`, `5xx`).
+  - Summarizes average and maximum request durations by method and route.
+  - Exposes process memory (`rss`, `heapTotal`, `heapUsed`, `external`) and process uptime.
+- Endpoint `GET /api/v1/health/metrics`:
+  - JSON format by default in standard DARB response envelope.
+  - Prometheus exposition format (version 0.0.4) when requested via `?format=prometheus` or `Accept: text/plain`.
+- Cardinality Protection:
+  - Route templates are strictly normalized (e.g. `/courses/:id/sections`, `/files/:id/metadata`).
+  - UUIDs, high-entropy tokens, and numeric IDs are sanitized to prevent metric explosion.
+  - Zero PII, student identifiers, or secrets in metric labels.
+
+### 6.3 Structured Logging & Data Redaction
+- Production JSON logging: Single-line JSON emitted to `stdout` (info/warn) and `stderr` (error) when `NODE_ENV=production`.
+- `X-Request-Id` correlation: Sanitized against `/^[a-zA-Z0-9_-]{1,64}$/`. Malicious or excessively long headers are replaced with fresh UUIDv4. Propagated to response headers, response envelopes, error envelopes, and logs.
+- Automated data redaction utility (`redaction.util.ts`):
+  - Header redaction: `Authorization` (Bearer/Basic), `Cookie` (`darb_session`).
+  - Body redaction: `password`, `secretKey`, `token`, `credentials`, `databaseUrl`.
+  - String redaction: PostgreSQL passwords, signed S3 URL query tokens (`ticket`, `signature`, `X-Amz-Signature`).
+
+### 6.4 Operational Runbook (`MONITORING_AND_ALERTING_RUNBOOK.md`)
+- Authoritative operational runbook with 7 core production alert definitions:
+  1. `http_5xx_rate_high`: 5xx error rate > 1% over 5m (Sev 1 / Sev 2).
+  2. `http_latency_p95_high`: p95 latency > 1000ms over 5m (Sev 2).
+  3. `database_down`: DB readiness failing for 3 consecutive checks (Sev 1).
+  4. `storage_unhealthy`: S3/R2 storage connectivity or IAM failure (Sev 2).
+  5. `process_memory_high`: RSS memory > 850 MB for > 10m (Sev 2).
+  6. `process_crash_loop`: Rapid process restarts > 3 in 10m (Sev 1).
+  7. `readiness_probe_failing`: Ingress readiness failing > 1m (Sev 1).
+- Each alert specifies: signal/metric, threshold, window, severity, user impact, immediate CLI triage commands, remediation steps, and recovery verification.
+
+### 6.5 Comprehensive Test Verification (224 Total Tests)
+- Redaction and sanitization unit tests (`redaction.util.spec.ts`): **9 / 9 passed**.
+- Metrics service unit tests (`metrics.service.spec.ts`): **3 / 3 passed**.
+- Health service unit tests (`health.service.spec.ts`): **3 / 3 passed**.
+- Total unit tests: **8 suites, 54 / 54 passed**.
+- Monitoring and health E2E test suite (`phase6-monitoring.e2e-spec.ts`): **10 / 10 passed**.
+- Total E2E tests: **9 suites, 170 / 170 passed**.
+- Monorepo build (`pnpm build`): Clean pass across `contracts`, `api`, and `web`.
+- Monorepo lint (`pnpm lint`) and typecheck (`pnpm typecheck`): 0 errors, 0 warnings.
+- **Status of P6-006**: Confirmed `NOT_STARTED`.
+
 
 

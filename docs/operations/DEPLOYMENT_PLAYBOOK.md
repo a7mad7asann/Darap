@@ -183,26 +183,41 @@ pnpm db:admin
 
 ---
 
-## 6. Post-Deployment Verification (Smoke Tests)
+## 6. Post-Deployment Verification (Smoke Tests) & Observability
 
 Execute the following verification sequence against the production URL:
 
-1. **Liveness & Readiness**:
+1. **Liveness, Readiness & Dependencies**:
    ```bash
+   # Liveness (process health & memory)
    curl -i https://api.darb.example.com/api/v1/health/live
    # HTTP/2 200, status: "ok"
    
+   # Readiness (PostgreSQL connectivity)
    curl -i https://api.darb.example.com/api/v1/health/ready
    # HTTP/2 200, status: "ready", database: "connected"
+
+   # Backing Dependencies (PostgreSQL + S3/R2 storage)
+   curl -i https://api.darb.example.com/api/v1/health/dependencies
+   # HTTP/2 200, status: "ok", dependencies: { database: { status: "up" }, storage: { status: "up" } }
    ```
 
-2. **Frontend Availability**:
+2. **Operational Metrics Collection**:
+   ```bash
+   # JSON format metrics
+   curl -i https://api.darb.example.com/api/v1/health/metrics
+
+   # Prometheus exposition format
+   curl -i -H "Accept: text/plain" https://api.darb.example.com/api/v1/health/metrics
+   ```
+
+3. **Frontend Availability**:
    ```bash
    curl -i -I https://darb.example.com/
    # HTTP/2 200 OK, Content-Type: text/html
    ```
 
-3. **CORS Headers Verification**:
+4. **CORS Headers Verification**:
    ```bash
    curl -i -X OPTIONS https://api.darb.example.com/api/v1/auth/me \
      -H "Origin: https://darb.example.com" \
@@ -211,13 +226,15 @@ Execute the following verification sequence against the production URL:
    # Access-Control-Allow-Credentials: true
    ```
 
-4. **Cookie Security Verification**:
+5. **Cookie Security Verification**:
    ```bash
    curl -i -X POST https://api.darb.example.com/api/v1/auth/login \
      -H "Content-Type: application/json" \
      -d '{"identifier":"admin.darb","password":"<WRONG_PASS>"}'
-   # Confirms 401 Unauthorized; rate limiting and audit logging are active.
+   # Confirms 401 Unauthorized; structured audit log emitted to stdout with X-Request-Id correlation.
    ```
+
+For complete alerting thresholds, log shipping configuration, and incident triage runbooks, consult [MONITORING_AND_ALERTING_RUNBOOK.md](file:///home/user/Documents/Darap/docs/operations/MONITORING_AND_ALERTING_RUNBOOK.md).
 
 ---
 
