@@ -16,6 +16,12 @@ export enum Environment {
   Test = 'test',
 }
 
+export enum StorageProviderType {
+  Local = 'local',
+  S3 = 's3',
+  R2 = 'r2',
+}
+
 export const INSECURE_SECRET_PATTERNS = [
   'change-this',
   'super-secret-key',
@@ -81,6 +87,42 @@ export class EnvironmentVariables {
   @IsBoolean()
   @IsOptional()
   ENABLE_SWAGGER?: boolean;
+
+  @IsEnum(StorageProviderType)
+  @IsOptional()
+  STORAGE_PROVIDER: StorageProviderType = StorageProviderType.Local;
+
+  @IsString()
+  @IsOptional()
+  STORAGE_BUCKET?: string;
+
+  @IsString()
+  @IsOptional()
+  STORAGE_REGION?: string;
+
+  @IsString()
+  @IsOptional()
+  STORAGE_ENDPOINT?: string;
+
+  @IsString()
+  @IsOptional()
+  STORAGE_ACCESS_KEY_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  STORAGE_SECRET_ACCESS_KEY?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  STORAGE_FORCE_PATH_STYLE?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  STORAGE_SIGNED_URL_TTL_SECONDS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  STORAGE_MAX_FILE_SIZE_BYTES?: number;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -97,6 +139,42 @@ export function validateEnv(config: Record<string, unknown>) {
       .map((e) => Object.values(e.constraints ?? {}).join(', '))
       .join('; ');
     throw new Error(`Environment variable validation failed: ${errorDetails}`);
+  }
+
+  // Storage configuration invariants for S3 and R2
+  if (
+    validatedConfig.STORAGE_PROVIDER === StorageProviderType.S3 ||
+    validatedConfig.STORAGE_PROVIDER === StorageProviderType.R2
+  ) {
+    if (!validatedConfig.STORAGE_BUCKET || validatedConfig.STORAGE_BUCKET.trim() === '') {
+      throw new Error(
+        `Storage configuration error: STORAGE_BUCKET is required when STORAGE_PROVIDER is '${validatedConfig.STORAGE_PROVIDER}'.`,
+      );
+    }
+    if (
+      !validatedConfig.STORAGE_ACCESS_KEY_ID ||
+      validatedConfig.STORAGE_ACCESS_KEY_ID.trim() === ''
+    ) {
+      throw new Error(
+        `Storage configuration error: STORAGE_ACCESS_KEY_ID is required when STORAGE_PROVIDER is '${validatedConfig.STORAGE_PROVIDER}'.`,
+      );
+    }
+    if (
+      !validatedConfig.STORAGE_SECRET_ACCESS_KEY ||
+      validatedConfig.STORAGE_SECRET_ACCESS_KEY.trim() === ''
+    ) {
+      throw new Error(
+        `Storage configuration error: STORAGE_SECRET_ACCESS_KEY is required when STORAGE_PROVIDER is '${validatedConfig.STORAGE_PROVIDER}'.`,
+      );
+    }
+    if (
+      validatedConfig.STORAGE_PROVIDER === StorageProviderType.R2 &&
+      (!validatedConfig.STORAGE_ENDPOINT || validatedConfig.STORAGE_ENDPOINT.trim() === '')
+    ) {
+      throw new Error(
+        'Storage configuration error: STORAGE_ENDPOINT is required when STORAGE_PROVIDER is R2 (e.g. https://<account_id>.r2.cloudflarestorage.com).',
+      );
+    }
   }
 
   // Production-specific strict security invariants
@@ -127,6 +205,23 @@ export function validateEnv(config: Record<string, unknown>) {
       throw new Error(
         'Production security violation: DATABASE_URL uses default development credentials. Configure secure managed database credentials in production.',
       );
+    }
+
+    // 4. In production, if using S3 or R2, credentials must not match known insecure placeholders
+    if (
+      validatedConfig.STORAGE_PROVIDER === StorageProviderType.S3 ||
+      validatedConfig.STORAGE_PROVIDER === StorageProviderType.R2
+    ) {
+      const accessLower = (validatedConfig.STORAGE_ACCESS_KEY_ID ?? '').toLowerCase();
+      const secretLower = (validatedConfig.STORAGE_SECRET_ACCESS_KEY ?? '').toLowerCase();
+      const hasInsecureStorageKey = INSECURE_SECRET_PATTERNS.some(
+        (pattern) => accessLower.includes(pattern) || secretLower.includes(pattern),
+      );
+      if (hasInsecureStorageKey) {
+        throw new Error(
+          'Production security violation: STORAGE_ACCESS_KEY_ID or STORAGE_SECRET_ACCESS_KEY contains insecure placeholder words.',
+        );
+      }
     }
   }
 

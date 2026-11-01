@@ -112,4 +112,82 @@ describe('Environment Variables Validation', () => {
       expect(config.ENABLE_SWAGGER).toBe(true);
     });
   });
+
+  describe('Storage Configuration Validation', () => {
+    it('should throw an error if STORAGE_PROVIDER is s3 but STORAGE_BUCKET is missing', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          STORAGE_PROVIDER: 's3',
+          STORAGE_ACCESS_KEY_ID: 'valid-access-key-id',
+          STORAGE_SECRET_ACCESS_KEY: 'valid-secret-access-key-12345678',
+        });
+      }).toThrow(/STORAGE_BUCKET is required/);
+    });
+
+    it('should throw an error if STORAGE_PROVIDER is s3 but credentials are missing', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          STORAGE_PROVIDER: 's3',
+          STORAGE_BUCKET: 'darb-assets',
+        });
+      }).toThrow(/STORAGE_ACCESS_KEY_ID is required/);
+    });
+
+    it('should throw an error if STORAGE_PROVIDER is r2 but STORAGE_ENDPOINT is missing', () => {
+      expect(() => {
+        validateEnv({
+          ...validEnv,
+          STORAGE_PROVIDER: 'r2',
+          STORAGE_BUCKET: 'darb-assets',
+          STORAGE_ACCESS_KEY_ID: 'valid-access-key-id',
+          STORAGE_SECRET_ACCESS_KEY: 'valid-secret-access-key-12345678',
+        });
+      }).toThrow(/STORAGE_ENDPOINT is required when STORAGE_PROVIDER is R2/);
+    });
+
+    it('should throw an error in production if storage credentials use placeholder strings', () => {
+      expect(() => {
+        validateEnv({
+          DATABASE_URL:
+            'postgresql://darb_admin:StrongProdPass987!@db.darb.internal:5432/darb_prod',
+          SESSION_SECRET: 'k9#mP$vL2!xQ8@wZ5*jR1^nB4&tY7(uE3)sA6%dF0',
+          PORT: 4000,
+          NODE_ENV: 'production',
+          COOKIE_SECURE: true,
+          STORAGE_PROVIDER: 's3',
+          STORAGE_BUCKET: 'darb-assets',
+          STORAGE_ACCESS_KEY_ID: 'placeholder-key',
+          STORAGE_SECRET_ACCESS_KEY: 'secret-key-123456',
+        });
+      }).toThrow(
+        /STORAGE_ACCESS_KEY_ID or STORAGE_SECRET_ACCESS_KEY contains insecure placeholder words/,
+      );
+    });
+
+    it('should succeed with valid S3 and R2 configuration', () => {
+      const s3Config = validateEnv({
+        ...validEnv,
+        STORAGE_PROVIDER: 's3',
+        STORAGE_BUCKET: 'darb-assets',
+        STORAGE_REGION: 'eu-central-1',
+        STORAGE_ACCESS_KEY_ID: 'AKIAIOSFODNN7EXAMPLE',
+        STORAGE_SECRET_ACCESS_KEY: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+      });
+      expect(s3Config.STORAGE_PROVIDER).toBe('s3');
+      expect(s3Config.STORAGE_BUCKET).toBe('darb-assets');
+
+      const r2Config = validateEnv({
+        ...validEnv,
+        STORAGE_PROVIDER: 'r2',
+        STORAGE_BUCKET: 'darb-assets',
+        STORAGE_ENDPOINT: 'https://abc123def456.r2.cloudflarestorage.com',
+        STORAGE_ACCESS_KEY_ID: 'r2-access-key-id',
+        STORAGE_SECRET_ACCESS_KEY: 'r2-secret-key-1234567890',
+      });
+      expect(r2Config.STORAGE_PROVIDER).toBe('r2');
+      expect(r2Config.STORAGE_ENDPOINT).toBe('https://abc123def456.r2.cloudflarestorage.com');
+    });
+  });
 });

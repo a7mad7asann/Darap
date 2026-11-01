@@ -1,7 +1,7 @@
 # Phase 6 Report — Pilot Readiness & Production Hardening
 
 - **Phase Objective**: Complete comprehensive production configuration audit, end-to-end acceptance testing for the 2–5 teacher pilot, harden managed cloud deployment playbooks, and finalize operational monitoring.
-- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, and P6-003 TESTED; P6-004 through P6-006 NOT_STARTED)
+- **Current Phase Status**: `IN_PROGRESS` (P6-001, P6-002, P6-003, and P6-004 TESTED; P6-005 and P6-006 NOT_STARTED)
 - **Prerequisites**: Phases 1 through 5, Pre-Phase-6 Audit
 
 ---
@@ -13,7 +13,7 @@
 | `P6-001` | Production Configuration & Deployment Readiness Audit | Audit environment variables, implement strict production startup validation, eliminate hardcoded development origins from CORS, harden cookie deletion, create root `.dockerignore`, enforce non-root container execution, and add production config tests. | `TESTED` |
 | `P6-002` | Pilot Workflow Acceptance Suite | Complete student and teacher journeys automated across 2 teachers and 5 students under multi-tenant RLS. | `TESTED` |
 | `P6-003` | Production Deployment Playbook & Managed DB Runbook | Runbook for managed PostgreSQL (AWS RDS / Neon) and S3/R2 object storage setup; dual-role least-privilege setup; deployment and rollback procedures; initial admin provisioning. | `TESTED` |
-| `P6-004` | Managed Object Storage (S3/R2) Cloud Integration | Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider. | `NOT_STARTED` |
+| `P6-004` | Managed Object Storage (S3/R2) Cloud Integration | Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider. | `TESTED` |
 | `P6-005` | Monitoring, Alerting & Health Probes Hardening | Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization. | `NOT_STARTED` |
 | `P6-006` | Operational Pilot Readiness Sign-off | Final operational checklist validation for the pilot launch with 2–5 teachers. | `NOT_STARTED` |
 
@@ -159,4 +159,44 @@
 - Admin script verification: Successfully creates admin; fails safely with exit code 1 when password is missing or < 12 chars.
 - Full verification: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` all pass.
 - P6-004, P6-005, P6-006 confirmed as `NOT_STARTED`.
+
+---
+
+## 5. Work Completed (P6-004: Managed Object Storage (S3/R2 Cloud Integration))
+
+### 5.1 Storage Architecture & Drivers
+- Installed official AWS SDK packages: `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`.
+- Implemented `S3StorageProvider` ([`apps/api/src/modules/files/s3-storage.provider.ts`](file:///home/user/Documents/Darap/apps/api/src/modules/files/s3-storage.provider.ts)) supporting:
+  - AWS S3 (standard, GovCloud, regional endpoints).
+  - Cloudflare R2 (zero egress fees, `endpoint: https://<account_id>.r2.cloudflarestorage.com`, `region: 'auto'`).
+  - MinIO and S3-compatible endpoints (`forcePathStyle: true`).
+- Enhanced `LocalStorageProvider` ([`apps/api/src/modules/files/local-storage.provider.ts`](file:///home/user/Documents/Darap/apps/api/src/modules/files/local-storage.provider.ts)) with in-memory binary object storage and metadata lookup for local development.
+- Configured dynamic factory in `FilesModule` to instantiate either driver based on `STORAGE_PROVIDER`.
+
+### 5.2 Database Migration & Schema Enhancement
+- Updated `FileObject` model in `schema.prisma` with `storageProvider String @default("local")`.
+- Applied Prisma migration `20261101115000_add_file_storage_provider` (`ALTER TABLE "FileObject" ADD COLUMN "storageProvider" TEXT NOT NULL DEFAULT 'local';`).
+- PostgreSQL Row-Level Security policy `fileobject_tenant_isolation` automatically enforces isolation on the new column.
+
+### 5.3 Security, Authorization & Validation Controls
+- Strict whitelist on MIME types (PDF, JPG, PNG, WEBP, DOC, DOCX, TXT) and extensions.
+- Server-enforced maximum file size cap (25 MB).
+- Storage key namespace protection: `tenants/${tenantId}/...` prefix verified upon upload completion.
+- Anti-IDOR authorization checks: Download tokens are issued only after validating active course enrollment and lesson publication, or student assignment submission ownership.
+- Added authorized metadata endpoint: `GET /api/v1/files/:fileId/metadata` in `FilesController`.
+
+### 5.4 Environment Validation (`env.validation.ts`)
+- Added storage configuration properties: `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_FORCE_PATH_STYLE`, `STORAGE_SIGNED_URL_TTL_SECONDS`, `STORAGE_MAX_FILE_SIZE_BYTES`.
+- Required validation: S3/R2 require bucket, access key, and secret key; R2 requires endpoint; production rejects placeholder keys.
+
+### 5.5 Comprehensive Verification (198 Tests Total)
+- Real HTTP S3-compatible integration tests (`s3-storage.provider.spec.ts`): **6 / 6 passed**.
+- Environment validation unit tests (`env.validation.spec.ts`): **15 / 15 passed**.
+- Storage security and tenant-isolation E2E tests (`phase6-object-storage.e2e-spec.ts`): **14 / 14 passed**.
+- Full repository E2E test suite: **8 suites, 160 / 160 passed**.
+- Full unit test suite: **5 suites, 38 / 38 passed**.
+- Monorepo build (`pnpm build`): Clean pass across `contracts`, `api`, and `web`.
+- TypeScript (`pnpm typecheck`) and ESLint (`pnpm lint`): 0 errors, 0 warnings.
+- **Status of P6-005 and P6-006**: Confirmed `NOT_STARTED`.
+
 

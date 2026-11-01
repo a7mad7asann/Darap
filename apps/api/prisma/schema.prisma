@@ -335,6 +335,7 @@ model FileObject {
   mimeType              String
   byteSize              BigInt
   storageKey            String
+  storageProvider       String                 @default("local")
   isPublic              Boolean                @default(false)
   createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime               @updatedAt @db.Timestamptz(6)

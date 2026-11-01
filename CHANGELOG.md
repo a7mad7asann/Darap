@@ -4,6 +4,40 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-01 — Phase 6 — P6-004: Managed Object Storage (S3/R2 Cloud Integration)
+
+### Summary
+- Integrated provider-neutral managed object storage architecture supporting AWS S3, Cloudflare R2, MinIO, and local fallback, preserving strict PostgreSQL Row-Level Security (RLS), multi-tenant isolation, and resource-level authorization.
+- **Object Storage Architecture & Drivers**:
+  - Installed official AWS SDK v3 dependencies (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`).
+  - Implemented `S3StorageProvider` supporting SigV4 presigned upload URLs (PUT, 900s TTL), presigned download URLs (GET, 300s TTL), `HeadObject` existence verification, `HeadObject` metadata retrieval, direct upload/download, and object deletion.
+  - Full support for Cloudflare R2 (`endpoint: https://<account_id>.r2.cloudflarestorage.com`, `region: 'auto'`).
+  - Enhanced `LocalStorageProvider` with in-memory binary object storage and metadata lookup for local development.
+  - Dynamically switches drivers via `STORAGE_PROVIDER` (`'local'`, `'s3'`, `'r2'`) in `FilesModule`.
+- **Database Migration & Metadata Model**:
+  - Added `storageProvider` column to `FileObject` with migration `20261101115000_add_file_storage_provider`.
+  - Backed by forced PostgreSQL Row-Level Security (`fileobject_tenant_isolation`).
+- **Security & Authorization Controls**:
+  - Added authorized metadata endpoint `GET /api/v1/files/:fileId/metadata` in `FilesController`.
+  - Whitelist validation of MIME types (PDF, JPG, PNG, WEBP, DOC, DOCX, TXT) and extensions.
+  - 25 MB maximum file size limit server-enforced.
+  - Storage key namespace protection (`tenants/${tenantId}/...`) verified upon upload completion.
+  - Anti-IDOR checks: Download tokens and metadata access require verified course enrollment & lesson publication, or assignment submission ownership.
+- **Environment Validation**:
+  - Added storage environment variables (`STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_FORCE_PATH_STYLE`, `STORAGE_SIGNED_URL_TTL_SECONDS`, `STORAGE_MAX_FILE_SIZE_BYTES`).
+  - Production validation detects and blocks placeholder credentials.
+- **Operations & Runbooks**:
+  - Authored comprehensive `docs/operations/OBJECT_STORAGE_RUNBOOK.md` detailing AWS S3 and Cloudflare R2 setup, bucket privacy, CORS policies, IAM least-privilege policies, and troubleshooting.
+- **Verification**:
+  - Real HTTP S3-compatible integration tests (`s3-storage.provider.spec.ts`): 6 / 6 passed.
+  - Environment validation unit tests (`env.validation.spec.ts`): 15 / 15 passed.
+  - Storage security and tenant-isolation E2E tests (`phase6-object-storage.e2e-spec.ts`): 14 / 14 passed.
+  - Full repository test suites: 198 / 198 passed (160 E2E, 38 unit).
+  - Clean build, 0 typecheck errors, 0 ESLint warnings.
+  - P6-005 and P6-006 confirmed as `NOT_STARTED`.
+
+---
+
 ## 2026-11-01 — Phase 6 — P6-003: Production Deployment Playbook & Managed DB Runbook
 
 ### Summary

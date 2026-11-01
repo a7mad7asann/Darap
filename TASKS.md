@@ -271,7 +271,7 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
 ---
 
 ## Phase 6 — Pilot Readiness & Production Hardening
-- **Phase Status**: `IN_PROGRESS` (P6-001, P6-002, and P6-003 completed; P6-004 through P6-006 pending)
+- **Phase Status**: `IN_PROGRESS` (P6-001, P6-002, P6-003, and P6-004 completed; P6-005 and P6-006 pending)
 
 - [x] **P6-001 — Production Configuration & Deployment Readiness Audit**
   - **Status**: `TESTED`
@@ -291,10 +291,21 @@ Status values: `NOT_STARTED` | `IN_PROGRESS` | `BLOCKED` | `IMPLEMENTED` | `TEST
   - **Acceptance**: Authoritative production deployment playbook and managed PostgreSQL runbook covering runtime versions (Node.js 18/20 LTS, pnpm 12, PostgreSQL 16), DNS and HTTPS topologies (shared apex, path-routed, distinct apex), reverse proxy architecture, environment variable matrix, secret provisioning, CORS & cookie security, dual-role database security (`darb_migrator` DDL owner vs `darb_app` unprivileged DML role with `NOSUPERUSER NOBYPASSRLS`), PostgreSQL Row-Level Security (RLS) enforcement verification queries, transaction-mode connection pooling (PgBouncer/Supavisor), SSL/TLS connectivity, Prisma migration lifecycle (`prisma migrate deploy`), safe zero-downtime schema evolution (expand-contract pattern), application vs database rollback procedures, and automated initial administrator provisioning script (`pnpm db:admin`). Backup and restore operational boundaries documented.
   - **File Paths**: `docs/operations/DEPLOYMENT_PLAYBOOK.md`, `docs/operations/MANAGED_POSTGRESQL_RUNBOOK.md`, `apps/api/prisma/seed-admin.ts`, `apps/api/package.json`, `package.json`, `docs/architecture/deployment-and-storage.md`
 
-- [ ] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
+- [x] **P6-004 — Managed Object Storage (S3/R2) Cloud Integration**
+  - **Status**: `TESTED`
+  - **Dependencies**: P6-001
+  - **Acceptance**: Provider-neutral managed object storage architecture supporting AWS S3, Cloudflare R2, and local fallback; installed official `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`; implemented `S3StorageProvider` with SigV4 presigned upload and download URLs, HeadObject existence verification, object metadata retrieval, direct upload/download, and object deletion; enhanced `LocalStorageProvider` with in-memory binary object storage; added `storageProvider` to `FileObject` with migration `20261101115000_add_file_storage_provider` under PostgreSQL RLS; implemented `GET /api/v1/files/:fileId/metadata` endpoint in `FilesController`; added strict startup environment validation for S3/R2; comprehensive testing with real HTTP S3-compatible server tests (6 tests), environment validation tests (15 tests), and storage security/tenant isolation E2E suite (14 tests). All 198 tests passing across repository (160 E2E, 38 unit).
+  - **File Paths**: `apps/api/src/modules/files/s3-storage.provider.ts`, `apps/api/src/modules/files/local-storage.provider.ts`, `apps/api/src/modules/files/storage.provider.ts`, `apps/api/src/modules/files/files.service.ts`, `apps/api/src/modules/files/files.controller.ts`, `apps/api/src/modules/files/files.module.ts`, `apps/api/src/config/env.validation.ts`, `apps/api/src/modules/files/s3-storage.provider.spec.ts`, `apps/api/test/phase6-object-storage.e2e-spec.ts`, `docs/operations/OBJECT_STORAGE_RUNBOOK.md`
+
+- [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
   - **Status**: `NOT_STARTED`
   - **Dependencies**: P6-001
-  - **Acceptance**: Production S3/R2 driver integration and presigned URLs with fallback to LocalStorageProvider.
+  - **Acceptance**: Readiness and liveness probe latency thresholds, database connection pool exhaustion alarms, and structured log sanitization.
+
+- [ ] **P6-006 — Operational Pilot Readiness Sign-off**
+  - **Status**: `NOT_STARTED`
+  - **Dependencies**: P6-002 through P6-005
+  - **Acceptance**: Final operational checklist validation for the pilot launch with 2–5 teachers.
 
 - [ ] **P6-005 — Monitoring, Alerting & Health Probes Hardening**
   - **Status**: `NOT_STARTED`

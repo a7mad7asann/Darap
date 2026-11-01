@@ -167,6 +167,7 @@ export class FilesService {
           mimeType: dto.mimeType,
           byteSize: BigInt(dto.byteSize),
           storageKey: dto.storageKey,
+          storageProvider: this.storage.providerName,
           isPublic: false,
         },
       });
@@ -273,6 +274,10 @@ export class FilesService {
         throw new ForbiddenException('غير مصرح لك بإزالة هذا الملف');
       }
 
+      const file = await tx.fileObject.findFirst({
+        where: { id: fileId, tenantId },
+      });
+
       // Remove join link
       await tx.lessonFile.deleteMany({
         where: { lessonId, fileId },
@@ -283,6 +288,10 @@ export class FilesService {
         where: { id: fileId, tenantId },
         data: { deletedAt: new Date() },
       });
+
+      if (file) {
+        await this.storage.deleteObject(file.storageKey);
+      }
 
       return {
         message: 'تمت إزالة الملف بنجاح',
@@ -416,6 +425,7 @@ export class FilesService {
           mimeType: dto.mimeType,
           byteSize: BigInt(dto.byteSize),
           storageKey: dto.storageKey,
+          storageProvider: this.storage.providerName,
           isPublic: false,
         },
       });
@@ -482,6 +492,112 @@ export class FilesService {
         mimeType: file.mimeType,
         expiresInSeconds: result.expiresInSeconds,
       };
+    });
+  }
+
+  async getFileMetadata(
+    userId: string,
+    userRole: UserRole,
+    activeTenantId: string | null,
+    fileId: string,
+  ) {
+    if (activeTenantId && (userRole === UserRole.TEACHER || userRole === UserRole.ADMIN)) {
+      return this.prisma.withTenant(activeTenantId, async (tx) => {
+        const file = await tx.fileObject.findFirst({
+          where: { id: fileId, deletedAt: null },
+        });
+
+        if (!file) {
+          throw new NotFoundException('الملف غير موجود');
+        }
+
+        return {
+          id: file.id,
+          tenantId: file.tenantId,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          byteSize: Number(file.byteSize),
+          storageProvider: file.storageProvider,
+          createdAt: file.createdAt.toISOString(),
+        };
+      });
+    }
+
+    return this.prisma.withBypassRls(async (tx) => {
+      const file = await tx.fileObject.findFirst({
+        where: { id: fileId, deletedAt: null },
+        include: {
+          lessonFiles: {
+            include: {
+              lesson: { include: { course: true } },
+            },
+          },
+          submissionAttachments: {
+            include: {
+              submission: true,
+            },
+          },
+        },
+      });
+
+      if (!file) {
+        throw new NotFoundException('الملف غير موجود');
+      }
+
+      // If user uploaded the file
+      if (file.uploadedById === userId) {
+        return {
+          id: file.id,
+          tenantId: file.tenantId,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          byteSize: Number(file.byteSize),
+          storageProvider: file.storageProvider,
+          createdAt: file.createdAt.toISOString(),
+        };
+      }
+
+      // Check if student owns submission attachment
+      const isSubmittingStudent = file.submissionAttachments.some(
+        (sa) => sa.submission.studentId === userId,
+      );
+      if (isSubmittingStudent) {
+        return {
+          id: file.id,
+          tenantId: file.tenantId,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          byteSize: Number(file.byteSize),
+          storageProvider: file.storageProvider,
+          createdAt: file.createdAt.toISOString(),
+        };
+      }
+
+      // Check if student is enrolled in course for lesson file
+      for (const lf of file.lessonFiles) {
+        if (lf.lesson.deletedAt || !lf.lesson.isPublished) continue;
+        const enrollment = await tx.enrollment.findFirst({
+          where: {
+            studentId: userId,
+            courseId: lf.lesson.courseId,
+            status: EnrollmentStatus.ACTIVE,
+            deletedAt: null,
+          },
+        });
+        if (enrollment) {
+          return {
+            id: file.id,
+            tenantId: file.tenantId,
+            originalName: file.originalName,
+            mimeType: file.mimeType,
+            byteSize: Number(file.byteSize),
+            storageProvider: file.storageProvider,
+            createdAt: file.createdAt.toISOString(),
+          };
+        }
+      }
+
+      throw new ForbiddenException('غير مصرح لك بالوصول إلى بيانات هذا الملف');
     });
   }
 }

@@ -58,4 +58,5 @@ The `FileObject` model in `schema.prisma` already includes:
 For step-by-step production setup, managed database configuration, deployment sequences, and rollback runbooks, refer to:
 - [Production Deployment Playbook](../operations/DEPLOYMENT_PLAYBOOK.md)
 - [Managed PostgreSQL Runbook & RLS Operational Guide](../operations/MANAGED_POSTGRESQL_RUNBOOK.md)
+- [Managed Object Storage (S3 / Cloudflare R2) Runbook](../operations/OBJECT_STORAGE_RUNBOOK.md)
 
