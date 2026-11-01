@@ -2,10 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-  ShieldAlert,
-  LogOut,
   Users,
   School,
   KeyRound,
@@ -14,14 +11,23 @@ import {
   AlertCircle,
   ToggleLeft,
   ToggleRight,
-  RotateCcw,
+  ShieldAlert,
+  Search,
+  Filter,
+  GraduationCap,
+  Sparkles,
+  Shield,
+  CheckCircle,
 } from 'lucide-react';
+import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { Badge } from '@/components/ui/badge';
+import { StatCard } from '@/components/ui/stat-card';
 import { apiClient } from '@/lib/api-client';
 import { AuthMeResponseDto, AdminUsersListDto, AdminUserItemDto } from '@darb/contracts';
 
@@ -32,6 +38,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<'users' | 'add-teacher' | 'add-student'>('users');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [roleFilter, setRoleFilter] = React.useState<'ALL' | 'TEACHER' | 'STUDENT' | 'ADMIN'>('ALL');
 
   // Teacher creation form state
   const [tUsername, setTUsername] = React.useState('');
@@ -196,7 +204,7 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FC]">
         <Loading message="جاري التحقق من صلاحيات إدارة المنصة..." />
       </div>
     );
@@ -204,7 +212,7 @@ export default function AdminDashboardPage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#F5F7FC]">
         <div className="w-full max-w-md">
           <ErrorState
             title="تعذر الوصول للوحة الإدارة"
@@ -216,194 +224,286 @@ export default function AdminDashboardPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" dir="rtl">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800 leading-tight">منصة دَرْب — إدارة النظام</h1>
-              <p className="text-xs text-slate-500">لوحة تحكم المشرف العام وتعيين الصلاحيات</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-600 hidden sm:inline">
-              المدير: {profile.user.displayName}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="text-rose-600 border-rose-200 hover:bg-rose-50"
-            >
-              <LogOut className="w-4 h-4 ml-1" />
-              خروج
-            </Button>
-          </div>
-        </div>
-      </header>
+  // Calculate KPIs
+  const allUsers = usersData?.items || [];
+  const teachersCount = allUsers.filter((u) => u.role === 'TEACHER').length;
+  const studentsCount = allUsers.filter((u) => u.role === 'STUDENT').length;
+  const activeCount = allUsers.filter((u) => u.isActive).length;
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 gap-6 text-sm font-medium">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'users'
-                ? 'border-purple-600 text-purple-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            سجل المستخدمين ({usersData?.total || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('add-teacher')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'add-teacher'
-                ? 'border-purple-600 text-purple-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <School className="w-4 h-4" />
-            إضافة معلم ومدرسة
-          </button>
-          <button
-            onClick={() => setActiveTab('add-student')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'add-student'
-                ? 'border-purple-600 text-purple-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            إضافة طالب جديد
-          </button>
+  // Filtered users for table
+  const filteredUsers = allUsers.filter((u) => {
+    const matchesSearch =
+      u.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.tenantName && u.tenantName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const navItems = [
+    {
+      label: 'إدارة المستخدمين',
+      href: '/admin',
+      icon: <Users className="w-4 h-4" />,
+      badge: usersData?.total,
+    },
+  ];
+
+  return (
+    <DashboardShell
+      role="ADMIN"
+      userDisplayName={profile.user.displayName}
+      userUsername={profile.user.username}
+      tenantName={profile.activeTenant?.tenantName || 'إدارة النظام'}
+      navItems={navItems}
+      onLogout={handleLogout}
+      title="لوحة تحكم المشرف العام"
+      subtitle="إدارة مستأجري النظام، وتوزيع الصلاحيات، وحسابات المعلمين والطلاب"
+    >
+      <div className="space-y-8">
+        {/* KPI Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <StatCard
+            title="إجمالي المستخدمين"
+            value={usersData?.total || 0}
+            subtitle="حسابات مسجلة في المنصة"
+            icon={<Users className="w-6 h-6" />}
+            iconBgColor="bg-[#F0F5FF]"
+            iconColor="text-[#246BFD]"
+          />
+          <StatCard
+            title="المعلمون والمدارس"
+            value={teachersCount}
+            subtitle="مساحات تدريسية مستقلة"
+            icon={<School className="w-6 h-6" />}
+            iconBgColor="bg-indigo-50"
+            iconColor="text-indigo-600"
+          />
+          <StatCard
+            title="الطلاب النشطون"
+            value={studentsCount}
+            subtitle="دخول بدون بريد إلكتروني"
+            icon={<GraduationCap className="w-6 h-6" />}
+            iconBgColor="bg-emerald-50"
+            iconColor="text-emerald-600"
+          />
+          <StatCard
+            title="الحسابات المفعلة"
+            value={activeCount}
+            subtitle={`من أصل ${usersData?.total || 0} مستخدم`}
+            icon={<CheckCircle className="w-6 h-6" />}
+            iconBgColor="bg-teal-50"
+            iconColor="text-teal-600"
+          />
+        </div>
+
+        {/* Action Tabs Header */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-[#E5EAF4] pb-4">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 shrink-0 ${
+                activeTab === 'users'
+                  ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                  : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>سجل المستخدمين ({usersData?.total || 0})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('add-teacher')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 shrink-0 ${
+                activeTab === 'add-teacher'
+                  ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                  : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
+              }`}
+            >
+              <School className="w-4 h-4" />
+              <span>إضافة معلم ومدرسة</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('add-student')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 shrink-0 ${
+                activeTab === 'add-student'
+                  ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                  : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>إضافة طالب جديد</span>
+            </button>
+          </div>
         </div>
 
         {/* TAB 1: Users Table */}
         {activeTab === 'users' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800">حسابات المعلمين والطلاب في النظام</h2>
-              <span className="text-xs text-slate-500">
-                إجمالي المسجلين: {usersData?.total || 0} مستخدم
-              </span>
+            {/* Search and Filters Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-[#E5EAF4] shadow-soft">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute inset-y-0 right-3.5 my-auto text-[#77829A] pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="ابحث بالاسم، اسم المستخدم، أو المدرسة..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pr-10 h-10 text-xs sm:text-sm bg-[#F8FAFC] border-[#E5EAF4]"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto shrink-0">
+                {(['ALL', 'TEACHER', 'STUDENT', 'ADMIN'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                      roleFilter === r
+                        ? 'bg-[#101A35] text-white'
+                        : 'bg-[#F1F5F9] text-[#77829A] hover:bg-[#E2E8F0] hover:text-[#17213A]'
+                    }`}
+                  >
+                    {r === 'ALL'
+                      ? 'الكل'
+                      : r === 'TEACHER'
+                      ? 'معلمون'
+                      : r === 'STUDENT'
+                      ? 'طلاب'
+                      : 'مدراء'}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold">
-                  <tr>
-                    <th className="py-3 px-4">الاسم الكامل</th>
-                    <th className="py-3 px-4">اسم المستخدم</th>
-                    <th className="py-3 px-4">الدور</th>
-                    <th className="py-3 px-4">المدرسة / الأكاديمية</th>
-                    <th className="py-3 px-4">الحالة</th>
-                    <th className="py-3 px-4 text-center">إجراءات الإدارة</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {usersData?.items.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-4 font-bold text-slate-800">{u.displayName}</td>
-                      <td className="py-3 px-4 font-mono text-xs text-slate-600">@{u.username}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            u.role === 'ADMIN'
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : u.role === 'TEACHER'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
-                          }`}
-                        >
-                          {u.role === 'ADMIN' ? 'مدير' : u.role === 'TEACHER' ? 'معلم' : 'طالب'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-xs text-slate-500">{u.tenantName || 'عام'}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            u.isActive
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {u.isActive ? 'مفعل' : 'معطل'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleUserStatus(u.id, u.isActive)}
-                            className="text-xs"
-                            title={u.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
-                          >
-                            {u.isActive ? (
-                              <ToggleRight className="w-4 h-4 text-emerald-600" />
-                            ) : (
-                              <ToggleLeft className="w-4 h-4 text-rose-500" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setResetTargetUser(u)}
-                            className="text-xs text-slate-600 hover:text-purple-600"
-                            title="إعادة تعيين كلمة المرور (مدعوم بسجل تدقيق)"
-                          >
-                            <KeyRound className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </td>
+            {/* Users Table Card */}
+            <Card className="border-[#E5EAF4] shadow-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-sm">
+                  <thead className="bg-[#F8FAFC] border-b border-[#E5EAF4] text-[#77829A] text-xs font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-5">المستخدم</th>
+                      <th className="py-3.5 px-5">اسم الدخول</th>
+                      <th className="py-3.5 px-5">الدور والصلاحية</th>
+                      <th className="py-3.5 px-5">المدرسة / الأكاديمية</th>
+                      <th className="py-3.5 px-5">الحالة</th>
+                      <th className="py-3.5 px-5 text-center">إجراءات</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5EAF4]">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-[#77829A]">
+                          لا توجد نتائج مطابقة لبحثك
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-[#F8FAFC]/80 transition-colors">
+                          <td className="py-3.5 px-5 font-bold text-[#17213A]">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[#F0F5FF] text-[#246BFD] flex items-center justify-center font-bold text-xs shrink-0">
+                                {u.displayName[0]}
+                              </div>
+                              <span>{u.displayName}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-5 font-mono text-xs text-[#77829A]">
+                            @{u.username}
+                          </td>
+                          <td className="py-3.5 px-5">
+                            <Badge
+                              variant={
+                                u.role === 'ADMIN'
+                                  ? 'warning'
+                                  : u.role === 'TEACHER'
+                                  ? 'primary'
+                                  : 'success'
+                              }
+                              size="sm"
+                            >
+                              {u.role === 'ADMIN' ? 'مدير' : u.role === 'TEACHER' ? 'معلم' : 'طالب'}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-5 text-xs text-[#77829A]">
+                            {u.tenantName || 'عام'}
+                          </td>
+                          <td className="py-3.5 px-5">
+                            <Badge
+                              variant={u.isActive ? 'success' : 'danger'}
+                              size="sm"
+                            >
+                              {u.isActive ? 'مفعل' : 'معطل'}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-5 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleUserStatus(u.id, u.isActive)}
+                                className="h-8 w-8 p-0"
+                                title={u.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+                              >
+                                {u.isActive ? (
+                                  <ToggleRight className="w-5 h-5 text-emerald-600" />
+                                ) : (
+                                  <ToggleLeft className="w-5 h-5 text-rose-500" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setResetTargetUser(u)}
+                                className="h-8 w-8 p-0 text-[#77829A] hover:text-[#246BFD]"
+                                title="إعادة تعيين كلمة المرور (مدعوم بسجل تدقيق)"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
         )}
 
         {/* TAB 2: Add Teacher Form */}
         {activeTab === 'add-teacher' && (
-          <Card className="max-w-2xl border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-slate-800">
-                إنشاء حساب معلم جديد ومساحة عمل مدرسة
+          <Card className="max-w-2xl border-[#E5EAF4] shadow-card">
+            <CardHeader className="border-b border-[#E5EAF4] pb-5">
+              <CardTitle className="text-xl font-bold text-[#17213A] flex items-center gap-2">
+                <School className="w-5 h-5 text-[#246BFD]" />
+                <span>إنشاء حساب معلم جديد ومساحة عمل مدرسة</span>
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs text-[#77829A]">
                 يقوم بإنشاء حساب معلم معزول مع مساحة مدرسة خاصة به ورابط مخصص (Slug) وفق معايير عزل المستأجرين.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-6 space-y-5">
               {teacherMsg && (
                 <div
-                  className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                  className={`p-4 rounded-xl text-xs flex items-center gap-3 ${
                     teacherMsg.type === 'success'
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : 'bg-rose-50 text-rose-800 border border-rose-200'
                   }`}
                 >
                   {teacherMsg.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
                   )}
-                  <span>{teacherMsg.text}</span>
+                  <span className="font-medium">{teacherMsg.text}</span>
                 </div>
               )}
 
               <form onSubmit={handleCreateTeacher} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       اسم المستخدم <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -414,7 +514,7 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       كلمة المرور المؤقتة <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -428,7 +528,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                     الاسم الكامل للمعلم <span className="text-rose-500">*</span>
                   </label>
                   <Input
@@ -441,7 +541,7 @@ export default function AdminDashboardPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       اسم المدرسة / الأكاديمية <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -452,7 +552,7 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       المعرف الإنجليزي (Slug) <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -465,7 +565,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                     التخصص التدريسي
                   </label>
                   <Input
@@ -475,13 +575,14 @@ export default function AdminDashboardPage() {
                   />
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-3">
                   <Button
                     type="submit"
                     disabled={submittingTeacher}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    isLoading={submittingTeacher}
+                    className="w-full sm:w-auto px-6 font-bold"
                   >
-                    {submittingTeacher ? 'جاري الإنشاء...' : 'إنشاء حساب المعلم والمدرسة'}
+                    إنشاء حساب المعلم والمدرسة
                   </Button>
                 </div>
               </form>
@@ -491,37 +592,38 @@ export default function AdminDashboardPage() {
 
         {/* TAB 3: Add Student Form */}
         {activeTab === 'add-student' && (
-          <Card className="max-w-2xl border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-slate-800">
-                تسجيل طالب جديد (بدون بريد إلكتروني)
+          <Card className="max-w-2xl border-[#E5EAF4] shadow-card">
+            <CardHeader className="border-b border-[#E5EAF4] pb-5">
+              <CardTitle className="text-xl font-bold text-[#17213A] flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-[#246BFD]" />
+                <span>تسجيل طالب جديد (بدون بريد إلكتروني)</span>
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs text-[#77829A]">
                 يسجل الطالب باستخدام اسم المستخدم وكلمة المرور فقط، لتمكينه من الانضمام للمقررات الدراسية.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-6 space-y-5">
               {studentMsg && (
                 <div
-                  className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                  className={`p-4 rounded-xl text-xs flex items-center gap-3 ${
                     studentMsg.type === 'success'
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : 'bg-rose-50 text-rose-800 border border-rose-200'
                   }`}
                 >
                   {studentMsg.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
                   )}
-                  <span>{studentMsg.text}</span>
+                  <span className="font-medium">{studentMsg.text}</span>
                 </div>
               )}
 
               <form onSubmit={handleCreateStudent} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       اسم المستخدم <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -532,7 +634,7 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       كلمة المرور <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -546,7 +648,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                     اسم الطالب الرباعي <span className="text-rose-500">*</span>
                   </label>
                   <Input
@@ -559,7 +661,7 @@ export default function AdminDashboardPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       معرف المدرسة / مساحة العمل <span className="text-rose-500">*</span>
                     </label>
                     <Input
@@ -570,7 +672,7 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                       الصف الدراسي
                     </label>
                     <Input
@@ -581,13 +683,14 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-3">
                   <Button
                     type="submit"
                     disabled={submittingStudent}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    isLoading={submittingStudent}
+                    className="w-full sm:w-auto px-6 font-bold"
                   >
-                    {submittingStudent ? 'جاري التسجيل...' : 'تسجيل حساب الطالب'}
+                    تسجيل حساب الطالب
                   </Button>
                 </div>
               </form>
@@ -597,27 +700,32 @@ export default function AdminDashboardPage() {
 
         {/* Reset Password Modal */}
         {resetTargetUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="text-lg font-bold text-slate-800">
-                  إعادة تعيين كلمة المرور: {resetTargetUser.displayName}
-                </h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1226]/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-floating border border-[#E5EAF4] w-full max-w-md p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E5EAF4] pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#F0F5FF] text-[#246BFD] flex items-center justify-center font-bold">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-[#17213A]">
+                    إعادة تعيين كلمة المرور: {resetTargetUser.displayName}
+                  </h3>
+                </div>
                 <button
                   onClick={() => setResetTargetUser(null)}
-                  className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                  className="text-[#77829A] hover:text-[#17213A] text-lg font-bold"
                 >
                   ✕
                 </button>
               </div>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#77829A] leading-relaxed">
                 سيتم تشفير كلمة المرور وتعيينها فوراً، وسيتم تسجيل العملية رسمياً في سجل تدقيق النظام (Audit Log) لأغراض الأمان والمساءلة.
               </p>
 
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                     كلمة المرور الجديدة <span className="text-rose-500">*</span>
                   </label>
                   <Input
@@ -630,7 +738,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-[#17213A] mb-1.5">
                     سبب إعادة التعيين (مطلوب للتدقيق) <span className="text-rose-500">*</span>
                   </label>
                   <textarea
@@ -639,11 +747,11 @@ export default function AdminDashboardPage() {
                     placeholder="مثال: طلب ولي الأمر عبر إدارة المدرسة بعد نسيان الطالب لكلمة المرور"
                     value={resetReason}
                     onChange={(e) => setResetReason(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#E5EAF4] p-3 text-xs text-[#17213A] focus:border-[#246BFD] focus:ring-2 focus:ring-[#246BFD]/20 focus:outline-none"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t">
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5EAF4]">
                   <Button
                     type="button"
                     variant="outline"
@@ -654,17 +762,18 @@ export default function AdminDashboardPage() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
                     disabled={submittingReset}
+                    isLoading={submittingReset}
+                    className="font-bold"
                   >
-                    {submittingReset ? 'جاري التعيين...' : 'تأكيد وحفظ التغيير'}
+                    تأكيد وحفظ التغيير
                   </Button>
                 </div>
               </form>
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

@@ -23,21 +23,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none';
+      'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none';
 
     const variantStyles = {
       default:
-        'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 active:bg-emerald-800 shadow-sm',
+        'bg-[#246BFD] text-white hover:bg-[#1A56DE] focus:ring-[#246BFD] active:bg-[#1442B5] shadow-sm shadow-[#246BFD]/20',
       primary:
-        'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 active:bg-emerald-800 shadow-sm',
+        'bg-[#246BFD] text-white hover:bg-[#1A56DE] focus:ring-[#246BFD] active:bg-[#1442B5] shadow-sm shadow-[#246BFD]/20',
       secondary:
-        'bg-slate-800 text-white hover:bg-slate-900 focus:ring-slate-700 active:bg-slate-950 shadow-sm',
+        'bg-[#17264A] text-white hover:bg-[#101A35] focus:ring-[#17264A] active:bg-[#0B1226] shadow-sm',
       outline:
-        'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-emerald-500',
+        'border border-[#E5EAF4] bg-white text-[#17213A] hover:bg-[#F5F7FC] hover:border-[#C2D7FF] focus:ring-[#246BFD]',
       danger:
         'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 active:bg-rose-800 shadow-sm',
       ghost:
-        'bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-400',
+        'bg-transparent text-[#77829A] hover:text-[#17213A] hover:bg-[#F0F5FF] focus:ring-[#246BFD]',
     };
 
     const sizeStyles = {

@@ -25,6 +25,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { Badge } from '@/components/ui/badge';
+import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import { StudentAssignmentsView } from '@/components/student/student-assignments-view';
 import { StudentExamsView } from '@/components/student/student-exams-view';
@@ -158,66 +160,73 @@ export default function StudentCourseLearningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" dir="rtl">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/student"
-              className="text-slate-500 hover:text-slate-800 flex items-center text-sm font-medium"
-            >
-              <ArrowRight className="w-4 h-4 ml-1" />
-              بوابة الطالب
-            </Link>
-            <span className="text-slate-300">/</span>
-            <span className="font-bold text-slate-800 line-clamp-1">{courseInfo.title}</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-left hidden sm:block">
-              <span className="text-xs text-slate-500 font-medium">
-                إنجاز المقرر: {completedCount} من {lessons.length} ({progressPercent}%)
-              </span>
-              <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden mt-1">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+    <DashboardShell
+      role="STUDENT"
+      userDisplayName={courseInfo.teacherName ? `طالب لدى ${courseInfo.teacherName}` : 'طالب مسجل'}
+      tenantName={courseInfo.academyName || 'بوابة الطالب'}
+      navItems={[
+        {
+          label: 'مقرراتي الدراسية',
+          href: '/student',
+          icon: <BookOpen className="w-4 h-4" />,
+        },
+      ]}
+      onLogout={async () => {
+        await apiClient.logout();
+        router.push('/login');
+      }}
+      title={courseInfo.title}
+      subtitle={`المعلم: ${courseInfo.teacherName} • إنجاز: ${completedCount}/${lessons.length} (${progressPercent}%)`}
+      actions={
+        <div className="flex items-center gap-3">
+          <div className="text-left hidden sm:block">
+            <span className="text-xs text-[#77829A] font-semibold">
+              إنجاز المقرر: {completedCount}/{lessons.length} ({progressPercent}%)
+            </span>
+            <div className="w-32 h-2 bg-[#E5EAF4] rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-[#246BFD] rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
           </div>
+          <Link href="/student">
+            <Button variant="outline" size="sm" className="font-semibold text-xs">
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+              العودة للمقررات
+            </Button>
+          </Link>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      }
+    >
+      <div className="space-y-6">
         {/* Course Header Banner */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
+        <div className="bg-white rounded-2xl p-6 border border-[#E5EAF4] shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              <Badge variant="primary" size="sm">
                 {courseInfo.subject || 'مقرر دراسي'}
-              </span>
+              </Badge>
               {courseInfo.gradeLevel && (
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Badge variant="success" size="sm">
                   {courseInfo.gradeLevel}
-                </span>
+                </Badge>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">{courseInfo.title}</h1>
-            <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
+            <h1 className="text-2xl font-bold text-[#17213A]">{courseInfo.title}</h1>
+            <p className="text-sm text-[#77829A] max-w-3xl leading-relaxed">
               {courseInfo.description || 'لا يوجد وصف مضاف لهذا المقرر.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-6 text-xs text-slate-500 border-t md:border-t-0 md:border-r pr-0 md:pr-6 pt-3 md:pt-0">
+          <div className="flex items-center gap-6 text-xs text-[#77829A] border-t md:border-t-0 md:border-r pr-0 md:pr-6 pt-3 md:pt-0 border-[#E5EAF4]">
             <div>
-              <p className="flex items-center gap-1 font-medium text-slate-700">
-                <User className="w-3.5 h-3.5 text-blue-600" />
+              <p className="flex items-center gap-1.5 font-bold text-[#17213A]">
+                <User className="w-4 h-4 text-[#246BFD]" />
                 {courseInfo.teacherName}
               </p>
-              <p className="flex items-center gap-1 text-slate-400 mt-1">
-                <School className="w-3.5 h-3.5" />
+              <p className="flex items-center gap-1.5 text-[#77829A] mt-1">
+                <School className="w-4 h-4" />
                 {courseInfo.academyName}
               </p>
             </div>
@@ -225,13 +234,13 @@ export default function StudentCourseLearningPage() {
         </div>
 
         {/* Course Tabs Navigation */}
-        <div className="flex border-b border-slate-200 gap-6 text-sm font-medium mb-6">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-[#E5EAF4] pb-3">
           <button
             onClick={() => setActiveTab('lessons')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'lessons'
-                ? 'border-blue-600 text-blue-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -239,10 +248,10 @@ export default function StudentCourseLearningPage() {
           </button>
           <button
             onClick={() => setActiveTab('assignments')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'assignments'
-                ? 'border-blue-600 text-blue-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -250,10 +259,10 @@ export default function StudentCourseLearningPage() {
           </button>
           <button
             onClick={() => setActiveTab('exams')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'exams'
-                ? 'border-blue-600 text-blue-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <FileQuestion className="w-4 h-4" />
@@ -478,7 +487,7 @@ export default function StudentCourseLearningPage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

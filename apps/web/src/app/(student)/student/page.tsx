@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   GraduationCap,
-  LogOut,
   BookOpen,
   KeyRound,
   CheckCircle2,
@@ -13,13 +12,18 @@ import {
   ArrowLeft,
   User,
   Sparkles,
+  Layers,
+  FileText,
 } from 'lucide-react';
+import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { Badge } from '@/components/ui/badge';
+import { StatCard } from '@/components/ui/stat-card';
 import { apiClient } from '@/lib/api-client';
 import { AuthMeResponseDto, StudentCourseSummaryDto } from '@darb/contracts';
 
@@ -92,7 +96,7 @@ export default function StudentDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FC]">
         <Loading message="جاري تجهيز بوابة الطالب ومقرراتك..." />
       </div>
     );
@@ -100,7 +104,7 @@ export default function StudentDashboardPage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#F5F7FC]">
         <div className="w-full max-w-md">
           <ErrorState
             title="تعذر الوصول لبوابة الطالب"
@@ -112,124 +116,127 @@ export default function StudentDashboardPage() {
     );
   }
 
+  const totalLessons = courses.reduce((sum, c) => sum + (c.lessonsCount || 0), 0);
+
+  const navItems = [
+    {
+      label: 'مقرراتي الدراسية',
+      href: '/student',
+      icon: <BookOpen className="w-4 h-4" />,
+      badge: courses.length,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" dir="rtl">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
-              د
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-800 leading-tight">منصة دَرْب — بوابة الطالب</h1>
-              <p className="text-xs text-slate-500">
-                {profile.activeTenant?.tenantName || 'الأكاديمية التعليمية'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-600 hidden sm:inline">
-              مرحباً، {profile.user.displayName}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="text-rose-600 border-rose-200 hover:bg-rose-50"
-            >
-              <LogOut className="w-4 h-4 ml-1" />
-              خروج
-            </Button>
-          </div>
+    <DashboardShell
+      role="STUDENT"
+      userDisplayName={profile.user.displayName}
+      userUsername={profile.user.username}
+      tenantName={profile.activeTenant?.tenantName || 'بوابة الطالب'}
+      navItems={navItems}
+      onLogout={handleLogout}
+      title="بوابة الطالب التعليمية"
+      subtitle="متابعة المقررات، إنجاز المهام الدراسية، والوصول للدروس"
+    >
+      <div className="space-y-8">
+        {/* KPI Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <StatCard
+            title="المقررات الملتحق بها"
+            value={courses.length}
+            subtitle="مقررات دراسية نشطة"
+            icon={<BookOpen className="w-6 h-6" />}
+            iconBgColor="bg-[#F0F5FF]"
+            iconColor="text-[#246BFD]"
+          />
+          <StatCard
+            title="الدروس المتاحة"
+            value={totalLessons}
+            subtitle="درس وملف تعليمي"
+            icon={<FileText className="w-6 h-6" />}
+            iconBgColor="bg-indigo-50"
+            iconColor="text-indigo-600"
+          />
+          <StatCard
+            title="حالة الحساب"
+            value="نشط ومؤكد"
+            subtitle="دخول سريع باسم المستخدم"
+            icon={<CheckCircle2 className="w-6 h-6" />}
+            iconBgColor="bg-emerald-50"
+            iconColor="text-emerald-600"
+          />
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        {/* Welcome & Join Code Banner */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Welcome Info Card */}
-          <Card className="lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-0 shadow-md">
-            <CardContent className="p-6 space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                <GraduationCap className="w-7 h-7" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">{profile.user.displayName}</h2>
-                <p className="text-xs text-blue-100 font-mono mt-0.5">@{profile.user.username}</p>
-              </div>
-              <div className="pt-2 border-t border-white/20 text-xs text-blue-100 space-y-1">
-                <p>مقرراتك الدراسية النشطة: <strong className="text-white">{courses.length}</strong></p>
-                <p>تسجيل الدخول: باسم المستخدم وكلمة المرور دون الحاجة لبريد إلكتروني</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Join Course with Code Form */}
-          <Card className="lg:col-span-2 border-slate-200 shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 text-blue-600">
-                <KeyRound className="w-5 h-5" />
-                <CardTitle className="text-lg font-bold text-slate-800">
-                  الانضمام إلى مقرر دراسي جديد
-                </CardTitle>
-              </div>
-              <CardDescription className="text-xs">
-                أدخل كود الانضمام المكون من 12 خانة الذي زوّدك به معلمك للبدء في دراسة محتوى المقرر.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {joinMessage && (
-                <div
-                  className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
-                    joinMessage.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-800 border border-rose-200'
-                  }`}
-                >
-                  {joinMessage.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  )}
-                  <span>{joinMessage.text}</span>
+        {/* Join Course Banner */}
+        <Card className="border-[#E5EAF4] shadow-card bg-white overflow-hidden">
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0F5FF] text-[#246BFD] text-xs font-bold">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>رمز الانضمام</span>
                 </div>
-              )}
+                <h3 className="text-xl font-bold text-[#17213A]">
+                  هل لديك رمز انضمام لمقرر دراسي جديد؟
+                </h3>
+                <p className="text-xs text-[#77829A] leading-relaxed">
+                  أدخل رمز الانضمام المكون من مقاطع (مثل DARB-XXXX) المقدم من معلمك للالتحاق بالمقرر فوراً والاطلاع على المحتوى.
+                </p>
+              </div>
 
-              <form onSubmit={handleJoinCourse} className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
+              <div className="w-full md:w-auto min-w-[320px]">
+                {joinMessage && (
+                  <div
+                    className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${
+                      joinMessage.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                    }`}
+                  >
+                    {joinMessage.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    )}
+                    <span className="font-medium">{joinMessage.text}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleJoinCourse} className="flex gap-2.5">
                   <Input
                     required
-                    placeholder="مثال: DARB-A1B2-C3D4-E5F6"
+                    placeholder="مثال: DARB-A1B2-C3D4"
                     value={joinCodeInput}
                     onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                    className="font-mono uppercase text-center sm:text-right tracking-wider text-base"
+                    className="font-mono uppercase text-center sm:text-right tracking-wider text-sm h-11"
                     disabled={joining}
                   />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={joining || !joinCodeInput.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-                >
-                  {joining ? 'جاري التحقق...' : 'انضم الآن'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                  <Button
+                    type="submit"
+                    disabled={joining || !joinCodeInput.trim()}
+                    isLoading={joining}
+                    className="shrink-0 font-bold px-5"
+                  >
+                    انضم الآن
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {/* Enrolled Courses Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between border-b border-[#E5EAF4] pb-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-800">مقرراتي المسجلة</h2>
-              <p className="text-xs text-slate-500">تابع دروسك، نزل ملخصات المحاضرات، واختبر فهمك</p>
+              <h2 className="text-xl font-bold text-[#17213A]">مقرراتي الدراسية</h2>
+              <p className="text-xs text-[#77829A] mt-0.5">
+                تابع دروسك، أرسل واجباتك، واختبر فهمك
+              </p>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+            <Badge variant="primary" size="md">
               {courses.length} مقررات
-            </span>
+            </Badge>
           </div>
 
           {courses.length === 0 ? (
@@ -242,38 +249,43 @@ export default function StudentDashboardPage() {
               {courses.map((course) => (
                 <Card
                   key={course.enrollmentId}
-                  className="flex flex-col justify-between hover:shadow-md transition border-slate-200"
+                  className="flex flex-col justify-between hover:shadow-floating transition-all duration-200 border-[#E5EAF4]"
                 >
-                  <CardHeader className="space-y-2">
+                  <CardHeader className="space-y-3 pb-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      <Badge variant="primary" size="sm">
                         {course.subject || 'مقرر تعليمي'}
-                      </span>
-                      <span className="text-xs text-slate-400">
+                      </Badge>
+                      <span className="text-xs text-[#77829A]">
                         {new Date(course.enrolledAt).toLocaleDateString('ar-EG')}
                       </span>
                     </div>
-                    <CardTitle className="text-lg font-bold text-slate-800 line-clamp-1">
-                      {course.title}
+
+                    <CardTitle className="text-lg font-bold text-[#17213A] line-clamp-1 hover:text-[#246BFD] transition-colors">
+                      <Link href={`/student/courses/${course.courseId}`}>
+                        {course.title}
+                      </Link>
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">
+
+                    <CardDescription className="line-clamp-2 text-xs text-[#77829A] min-h-[32px]">
                       {course.description || 'لا يوجد وصف مضاف لهذا المقرر.'}
                     </CardDescription>
                   </CardHeader>
 
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-100">
-                      <span className="flex items-center gap-1 font-medium">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="flex items-center justify-between text-xs text-[#77829A] py-3 border-t border-[#E5EAF4]">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <User className="w-3.5 h-3.5 text-[#246BFD]" />
                         المعلم: {course.teacherName}
                       </span>
-                      <span className="font-semibold text-blue-600">
+                      <span className="flex items-center gap-1.5 font-semibold text-[#246BFD]">
+                        <FileText className="w-3.5 h-3.5" />
                         {course.lessonsCount} دروس
                       </span>
                     </div>
 
                     <Link href={`/student/courses/${course.courseId}`} className="block pt-1">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                      <Button className="w-full font-bold text-xs">
                         دخول المقرر ومتابعة الدروس
                         <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                       </Button>
@@ -284,7 +296,7 @@ export default function StudentDashboardPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

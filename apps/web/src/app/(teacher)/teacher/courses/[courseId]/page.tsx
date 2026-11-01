@@ -33,6 +33,8 @@ import { Input } from '@/components/ui/input';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { Badge } from '@/components/ui/badge';
+import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import { TeacherAssignmentsTab } from '@/components/teacher/teacher-assignments-tab';
@@ -444,7 +446,49 @@ export default function TeacherCourseDetailPage() {
   const unsectionedLessons = course.lessons.filter((l) => !l.sectionId);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" dir="rtl">
+    <DashboardShell
+      role="TEACHER"
+      userDisplayName={course.teacherName || 'معلم المقرر'}
+      tenantName="إدارة المقرر الدراسي"
+      navItems={[
+        {
+          label: 'مقرراتي الدراسية',
+          href: '/teacher',
+          icon: <BookOpen className="w-4 h-4" />,
+        },
+      ]}
+      onLogout={async () => {
+        await apiClient.logout();
+        router.push('/login');
+      }}
+      title={course.title}
+      subtitle={`المادة: ${course.subject || 'عام'} • ${course.lessons.length} دروس`}
+      actions={
+        <div className="flex items-center gap-2">
+          <Link href="/teacher">
+            <Button variant="outline" size="sm" className="font-semibold text-xs">
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+              العودة للمقررات
+            </Button>
+          </Link>
+          {course.status === CourseStatus.DRAFT && (
+            <Button
+              size="sm"
+              onClick={async () => {
+                await apiClient.publishCourse(course.id);
+                setCourse((prev) =>
+                  prev ? { ...prev, status: CourseStatus.PUBLISHED, isActive: true } : prev,
+                );
+              }}
+              className="font-bold text-xs shadow-xs"
+            >
+              <Send className="w-4 h-4 ml-1.5" />
+              نشر المقرر للطلاب
+            </Button>
+          )}
+        </div>
+      }
+    >
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -454,42 +498,7 @@ export default function TeacherCourseDetailPage() {
         className="hidden"
       />
 
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/teacher"
-              className="text-slate-500 hover:text-slate-800 flex items-center text-sm font-medium"
-            >
-              <ArrowRight className="w-4 h-4 ml-1" />
-              المقررات
-            </Link>
-            <span className="text-slate-300">/</span>
-            <span className="font-bold text-slate-800 line-clamp-1">{course.title}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {course.status === CourseStatus.DRAFT && (
-              <Button
-                size="sm"
-                onClick={async () => {
-                  await apiClient.publishCourse(course.id);
-                  setCourse((prev) =>
-                    prev ? { ...prev, status: CourseStatus.PUBLISHED, isActive: true } : prev,
-                  );
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <Send className="w-4 h-4 ml-1" />
-                نشر المقرر للطلاب
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <div className="space-y-6">
         {/* Prominent One-Time Join Code Banner */}
         {newRawCode && (
           <div className="p-5 rounded-2xl bg-amber-500 text-slate-950 shadow-lg border border-amber-600 space-y-3">
@@ -590,13 +599,13 @@ export default function TeacherCourseDetailPage() {
         </Card>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 gap-6 text-sm font-medium">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-[#E5EAF4] pb-3">
           <button
             onClick={() => setActiveTab('lessons')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'lessons'
-                ? 'border-emerald-600 text-emerald-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -604,10 +613,10 @@ export default function TeacherCourseDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('codes')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'codes'
-                ? 'border-emerald-600 text-emerald-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <KeyRound className="w-4 h-4" />
@@ -615,10 +624,10 @@ export default function TeacherCourseDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('students')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'students'
-                ? 'border-emerald-600 text-emerald-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -626,10 +635,10 @@ export default function TeacherCourseDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('assignments')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'assignments'
-                ? 'border-emerald-600 text-emerald-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -637,10 +646,10 @@ export default function TeacherCourseDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('exams')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === 'exams'
-                ? 'border-emerald-600 text-emerald-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#246BFD] text-white shadow-sm shadow-[#246BFD]/25'
+                : 'bg-white text-[#77829A] hover:bg-[#F5F7FC] hover:text-[#17213A] border border-[#E5EAF4]'
             }`}
           >
             <FileQuestion className="w-4 h-4" />
@@ -1146,8 +1155,8 @@ export default function TeacherCourseDetailPage() {
         {activeTab === 'exams' && (
           <TeacherExamsTab courseId={courseId} />
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 
   function renderLessonCard(lesson: LessonDto, idx: number) {

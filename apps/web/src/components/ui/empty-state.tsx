@@ -29,21 +29,21 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center p-8 text-center rounded-xl border border-dashed border-slate-300 bg-white/50 space-y-3',
+        'flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-[#CBD5E1] bg-white/70 space-y-3',
         className,
       )}
       {...props}
     >
-      <div className="p-3 bg-slate-100 rounded-full text-slate-500">
+      <div className="p-3.5 bg-[#F0F5FF] rounded-2xl text-[#246BFD]">
         {icon || <Inbox className="w-8 h-8 stroke-[1.5]" />}
       </div>
-      <h4 className="text-base font-bold text-slate-800">{title}</h4>
-      {desc && <p className="text-sm text-slate-500 max-w-sm">{desc}</p>}
+      <h4 className="text-base font-bold text-[#17213A]">{title}</h4>
+      {desc && <p className="text-sm text-[#77829A] max-w-sm">{desc}</p>}
       {action ? (
         <div className="pt-2">{action}</div>
       ) : actionLabel && onAction ? (
         <div className="pt-2">
-          <Button size="sm" onClick={onAction} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button size="sm" onClick={onAction}>
             {actionLabel}
           </Button>
         </div>

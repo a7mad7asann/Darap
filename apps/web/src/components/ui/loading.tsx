@@ -16,13 +16,13 @@ export function Loading({
       role="status"
       aria-live="polite"
       className={cn(
-        'flex flex-col items-center justify-center p-8 space-y-3 text-slate-500',
+        'flex flex-col items-center justify-center p-8 space-y-3 text-[#77829A]',
         className,
       )}
       {...props}
     >
-      <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-      {message && <p className="text-sm font-medium">{message}</p>}
+      <Loader2 className="w-8 h-8 animate-spin text-[#246BFD]" />
+      {message && <p className="text-sm font-medium text-[#17213A]">{message}</p>}
       <span className="sr-only">جاري تحميل المحتوى</span>
     </div>
   );

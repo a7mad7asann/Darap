@@ -23,9 +23,9 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`h-full bg-slate-50 text-slate-900 ${cairo.className}`}
+      className={`h-full bg-[#F5F7FC] text-[#17213A] ${cairo.className}`}
     >
-      <body className="h-full flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+      <body className="h-full flex flex-col antialiased selection:bg-brand-500 selection:text-white">
         {children}
       </body>
     </html>
