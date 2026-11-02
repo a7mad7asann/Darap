@@ -4,6 +4,42 @@ All notable changes to the DARB platform are documented in this file in reverse 
 
 ---
 
+## 2026-11-02 — Frontend UI/UX Redesign — Modern SaaS & Premium Dark
+
+### Summary
+- Implemented comprehensive UI/UX redesign across `@darb/web` combining Modern SaaS (clean white workspaces, soft blue backgrounds, crisp typography, and refined cards) with Premium Dark (deep navy sidebars, subtle gradients, and active blue highlights) while preserving 100% Arabic RTL layout and all functional API contracts.
+- **Design System & Palette Tokens (`tailwind.config.ts`, `globals.css`, `layout.tsx`)**:
+  - Dark Navigation: Primary Sidebar `#101A35`, Surface `#17264A`, Active `#246BFD`, Base `#0B1226`, Sidebar Text `#E8EEFF`, Muted `#AAB6D3`.
+  - Light Workspace: Workspace `#F5F7FC`, Cards `#FFFFFF`, Borders `#E5EAF4`, Text `#17213A`, Secondary `#77829A`.
+  - Brand Blues: `#246BFD` (Hover `#1A56DE`), Secondary `#5595FF`, Soft Tints `#F0F5FF`.
+  - Elevation & Geometry: `shadow-soft`, `shadow-card`, `shadow-floating`, `rounded-2xl`, `rounded-xl`.
+  - Cairo typography across all views with custom sleek scrollbars and brand blue selection styles.
+- **Unified Dashboard Shell (`apps/web/src/components/layout/dashboard-shell.tsx`)**:
+  - Responsive deep navy sidebar (`#101A35`) with DARB logo, role badge, counter badges, user profile card, and logout button.
+  - Mobile slide-out navigation drawer with backdrop blur.
+  - Clean topbar (`#FFFFFF`) with breadcrumbs, page title/context, and quick actions.
+- **Reusable UI Library Uplift (`apps/web/src/components/ui/`)**:
+  - `Button`: Primary SaaS blue `#246BFD` with hover `#1A56DE`, secondary navy `#17264A`, outline `#E5EAF4`, rounded-xl.
+  - `Card`: Rounded-2xl, `#E5EAF4` border, `#FFFFFF` background, `shadow-card`.
+  - `Input`: Rounded-xl, `#E5EAF4` border, `#246BFD` focus rings.
+  - `Badge` (new): Role, course status (`DRAFT`, `PUBLISHED`, `ARCHIVED`), active status, and subject pills.
+  - `StatCard` (new): KPI metric cards with icons, formatted values, and trend indicators.
+  - `EmptyState` & `Loading`: Modernized with brand colors and icons.
+- **Portals & Views Redesigned**:
+  - **Landing Page (`/`)**: Hero with isolation badge, interactive preview mockup, value proposition cards, and footer.
+  - **Login Page (`/login`)**: Floating card with demo role switcher pills (Teacher, Student, Admin), user/password icons, and security footer.
+  - **Admin Dashboard (`/admin`)**: 4 KPI stat cards (Total Users, Teachers, Students, Active), real-time search, role filter pills, user management table with status switches, and audit-logged password reset modal.
+  - **Teacher Portal (`/teacher`, `/teacher/courses/:id`)**: Course cards grid, status badges, create course modal, curriculum section/lesson management, join codes tab, enrolled roster, assignments tab, and exams tab.
+  - **Student Portal (`/student`, `/student/courses/:id`)**: Enrolled courses cards, join code card, course progress bar, split-view curriculum drawer and lesson reader with Markdown rendering, worksheets download, assignments, and exams.
+- **Verification & Deployment Freeze Compliance**:
+  - Web RTL smoke tests: 2/2 PASS.
+  - Web TypeScript & Lint: 0 errors (`next lint`, `tsc --noEmit`).
+  - Web Production Build: 8/8 routes compiled and optimized (`next build`).
+  - Pilot readiness CLI gate: `pnpm pilot:verify` PASS.
+  - Deployment Freeze maintained: strictly local frontend styling; Phase 7 status remains `IN_PROGRESS — DEPLOYMENT PAUSED`.
+
+---
+
 ## 2026-11-01 — Phase 7 — Deployment Freeze Notice (Effective Immediately)
 
 ### Summary
