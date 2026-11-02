@@ -358,7 +358,7 @@ export function TeacherAssignmentsTab({ courseId }: TeacherAssignmentsTabProps) 
                             size="sm"
                             variant="default"
                             onClick={() => handlePublish(assignment.id)}
-                            className="text-xs flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="text-xs flex items-center gap-1 bg-[#246BFD] hover:bg-[#1A56DE] text-white font-semibold"
                           >
                             <Send className="w-3.5 h-3.5" />
                             نشر التكليف
@@ -477,7 +477,7 @@ export function TeacherAssignmentsTab({ courseId }: TeacherAssignmentsTabProps) 
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   placeholder="اكتب التوجيهات والأسئلة المطلوبة من الطلاب بالتفصيل..."
-                  className="w-full rounded-md border border-slate-200 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-xl border border-[#E5EAF4] p-3 text-xs text-[#17213A] focus:outline-none focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD]"
                 />
               </div>
 
@@ -661,7 +661,7 @@ export function TeacherAssignmentsTab({ courseId }: TeacherAssignmentsTabProps) 
                                 setFeedbackMap({ ...feedbackMap, [sub.id]: e.target.value })
                               }
                               placeholder="أحسنت في الحل، ولكن انتبه إلى..."
-                              className="w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              className="w-full rounded-xl border border-[#E5EAF4] bg-white p-2.5 text-xs text-[#17213A] focus:outline-none focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD]"
                             />
                           </div>
 
@@ -670,7 +670,7 @@ export function TeacherAssignmentsTab({ courseId }: TeacherAssignmentsTabProps) 
                               size="sm"
                               onClick={() => handleGradeSubmission(sub.id)}
                               disabled={savingGradeId === sub.id}
-                              className="text-xs flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white"
+                              className="text-xs flex items-center gap-1 bg-[#246BFD] hover:bg-[#1A56DE] text-white font-semibold"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               {savingGradeId === sub.id ? 'جاري الحفظ...' : 'حفظ الدرجة والملاحظات'}

@@ -311,14 +311,14 @@ export function StudentAssignmentsView({ courseId }: StudentAssignmentsViewProps
                               setTextAnswers({ ...textAnswers, [assignment.id]: e.target.value })
                             }
                             placeholder="اكتب إجابتك أو ملخص حلك هنا..."
-                            className="w-full rounded-md border border-slate-200 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className="w-full rounded-xl border border-[#E5EAF4] p-3 text-xs text-[#17213A] focus:outline-none focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD]"
                           />
                         </div>
 
                         {/* File upload section */}
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <label className="text-xs font-medium text-slate-700">
+                            <label className="text-xs font-semibold text-[#17213A]">
                               الملفات المرفقة (PDF، مستندات، صور - حد أقصى 25 ميجابايت):
                             </label>
                             <Button
@@ -327,9 +327,9 @@ export function StudentAssignmentsView({ courseId }: StudentAssignmentsViewProps
                               size="sm"
                               onClick={() => handleTriggerUpload(assignment.id)}
                               disabled={uploadingForAssignment === assignment.id}
-                              className="text-xs flex items-center gap-1.5"
+                              className="text-xs flex items-center gap-1.5 font-semibold"
                             >
-                              <Upload className="w-3.5 h-3.5 text-slate-500" />
+                              <Upload className="w-3.5 h-3.5 text-[#246BFD]" />
                               {uploadingForAssignment === assignment.id ? 'جاري الرفع...' : 'إرفاق ملف حل'}
                             </Button>
                           </div>
@@ -339,7 +339,7 @@ export function StudentAssignmentsView({ courseId }: StudentAssignmentsViewProps
                               {attachedFiles.map((f) => (
                                 <div
                                   key={f.id}
-                                  className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs"
+                                  className="flex items-center gap-2 bg-[#F0F5FF] text-[#246BFD] border border-[#C2D7FF] px-3 py-1.5 rounded-xl text-xs font-medium"
                                 >
                                   <Paperclip className="w-3.5 h-3.5" />
                                   <span className="truncate max-w-[180px]">{f.name}</span>
@@ -361,7 +361,7 @@ export function StudentAssignmentsView({ courseId }: StudentAssignmentsViewProps
                           <Button
                             onClick={() => handleSubmitSolution(assignment.id)}
                             disabled={submittingAssignmentId === assignment.id}
-                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="flex items-center gap-2 bg-[#246BFD] hover:bg-[#1A56DE] text-white font-bold"
                           >
                             <Send className="w-4 h-4" />
                             {submittingAssignmentId === assignment.id ? 'جاري التسليم...' : 'تسليم الحل'}

@@ -19,6 +19,23 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    apiClient
+      .getMe()
+      .then((me) => {
+        if (me?.user?.role === UserRole.TEACHER) {
+          router.replace('/teacher');
+        } else if (me?.user?.role === UserRole.STUDENT) {
+          router.replace('/student');
+        } else if (me?.user?.role === UserRole.ADMIN) {
+          router.replace('/admin');
+        }
+      })
+      .catch(() => {
+        // Not authenticated, stay on login form
+      });
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);

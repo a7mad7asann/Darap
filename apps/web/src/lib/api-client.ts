@@ -59,12 +59,17 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`خطأ في استجابة الخادم (${res.status})`);
+  }
   if (!res.ok) {
     const errorEnvelope = data as ApiErrorResponseEnvelope;
-    const message = Array.isArray(errorEnvelope.message)
+    const message = Array.isArray(errorEnvelope?.message)
       ? errorEnvelope.message.join(', ')
-      : errorEnvelope.message || 'حدث خطأ أثناء معالجة الطلب';
+      : errorEnvelope?.message || 'حدث خطأ أثناء معالجة الطلب';
     throw new Error(message);
   }
   const envelope = data as ApiResponseEnvelope<T>;

@@ -428,7 +428,7 @@ export function TeacherExamsTab({ courseId }: TeacherExamsTabProps) {
                           <Button
                             size="sm"
                             onClick={() => handlePublishExam(exam.id)}
-                            className="text-xs flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="text-xs flex items-center gap-1 bg-[#246BFD] hover:bg-[#1A56DE] text-white font-semibold"
                           >
                             <Send className="w-3.5 h-3.5" />
                             نشر الاختبار
@@ -521,7 +521,7 @@ export function TeacherExamsTab({ courseId }: TeacherExamsTabProps) {
                   onChange={(e) => setInstructions(e.target.value)}
                   rows={3}
                   placeholder="مثال: يُمنع استخدام الآلة الحاسبة، لديك 45 دقيقة من لحظة البدء..."
-                  className="w-full rounded-md border border-slate-200 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-xl border border-[#E5EAF4] p-3 text-xs text-[#17213A] focus:outline-none focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD]"
                 />
               </div>
 

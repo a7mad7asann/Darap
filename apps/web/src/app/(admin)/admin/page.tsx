@@ -213,12 +213,17 @@ export default function AdminDashboardPage() {
   if (error || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[#F5F7FC]">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md space-y-3">
           <ErrorState
             title="تعذر الوصول للوحة الإدارة"
             message={error || 'يرجى تسجيل الدخول مجدداً'}
             onRetry={loadData}
           />
+          <div className="flex items-center justify-center gap-2">
+            <Button size="sm" onClick={() => router.push('/login')}>
+              تسجيل الدخول
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -242,10 +247,23 @@ export default function AdminDashboardPage() {
 
   const navItems = [
     {
-      label: 'إدارة المستخدمين',
-      href: '/admin',
+      label: 'سجل المستخدمين',
       icon: <Users className="w-4 h-4" />,
+      active: activeTab === 'users',
+      onClick: () => setActiveTab('users'),
       badge: usersData?.total,
+    },
+    {
+      label: 'إضافة معلم ومدرسة',
+      icon: <School className="w-4 h-4" />,
+      active: activeTab === 'add-teacher',
+      onClick: () => setActiveTab('add-teacher'),
+    },
+    {
+      label: 'إضافة طالب جديد',
+      icon: <UserPlus className="w-4 h-4" />,
+      active: activeTab === 'add-student',
+      onClick: () => setActiveTab('add-student'),
     },
   ];
 

@@ -19,7 +19,9 @@ import { Badge } from '@/components/ui/badge';
 
 export interface NavItem {
   label: string;
-  href: string;
+  href?: string;
+  onClick?: () => void;
+  active?: boolean;
   icon: React.ReactNode;
   badge?: string | number;
   badgeVariant?: 'primary' | 'warning' | 'success';
@@ -53,6 +55,8 @@ export function DashboardShell({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
+  const homeHref = role === 'ADMIN' ? '/admin' : role === 'TEACHER' ? '/teacher' : '/student';
+
   const roleMeta = {
     ADMIN: {
       label: 'مدير النظام',
@@ -75,7 +79,7 @@ export function DashboardShell({
     <div className="flex flex-col h-full bg-[#101A35] text-[#E8EEFF] select-none">
       {/* Brand Header */}
       <div className="p-6 border-b border-white/10 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href={homeHref} className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-xl bg-[#246BFD] flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-[#246BFD]/30 group-hover:scale-105 transition-transform">
             د
           </div>
@@ -114,19 +118,16 @@ export function DashboardShell({
         <p className="px-3 py-2 text-[11px] font-bold text-[#AAB6D3]/70 uppercase tracking-wider">
           القائمة الرئيسية
         </p>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
-                isActive
-                  ? 'bg-[#246BFD] text-white shadow-md shadow-[#246BFD]/25 font-semibold'
-                  : 'text-[#AAB6D3] hover:bg-[#17264A] hover:text-white'
-              }`}
-            >
+        {navItems.map((item, idx) => {
+          const isActive =
+            item.active !== undefined
+              ? item.active
+              : item.href
+              ? pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`))
+              : false;
+
+          const itemContent = (
+            <>
               <div className="flex items-center gap-3">
                 <span className={isActive ? 'text-white' : 'text-[#AAB6D3]'}>
                   {item.icon}
@@ -144,6 +145,39 @@ export function DashboardShell({
                   {item.badge}
                 </span>
               )}
+            </>
+          );
+
+          const itemClass = `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 text-right ${
+            isActive
+              ? 'bg-[#246BFD] text-white shadow-md shadow-[#246BFD]/25 font-semibold'
+              : 'text-[#AAB6D3] hover:bg-[#17264A] hover:text-white'
+          }`;
+
+          if (item.onClick) {
+            return (
+              <button
+                key={item.href || `nav-btn-${idx}`}
+                type="button"
+                onClick={() => {
+                  item.onClick?.();
+                  setMobileMenuOpen(false);
+                }}
+                className={itemClass}
+              >
+                {itemContent}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href || `nav-lnk-${idx}`}
+              href={item.href || '#'}
+              onClick={() => setMobileMenuOpen(false)}
+              className={itemClass}
+            >
+              {itemContent}
             </Link>
           );
         })}

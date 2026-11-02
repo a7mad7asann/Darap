@@ -59,15 +59,13 @@ export default function StudentCourseLearningPage() {
       setCourseInfo(details);
       setLessons(publishedLessons);
 
-      if (publishedLessons.length > 0 && !selectedLessonId) {
-        setSelectedLessonId(publishedLessons[0].id);
-      }
+      setSelectedLessonId((curr) => curr || (publishedLessons.length > 0 ? publishedLessons[0].id : null));
     } catch (err: any) {
       setError(err.message || 'تعذر تحميل بيانات المقرر أو لست مسجلاً به');
     } finally {
       setLoading(false);
     }
-  }, [courseId, selectedLessonId]);
+  }, [courseId]);
 
   React.useEffect(() => {
     loadData();
@@ -110,7 +108,7 @@ export default function StudentCourseLearningPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FC]">
         <Loading message="جاري تجهيز محتوى الدروس والملفات التعليمية..." />
       </div>
     );
@@ -118,13 +116,21 @@ export default function StudentCourseLearningPage() {
 
   if (error || !courseInfo) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#F5F7FC]">
+        <div className="w-full max-w-md space-y-3">
           <ErrorState
             title="تعذر الوصول لمحتوى المقرر"
             message={error || 'المقرر غير متوفر أو لست مسجلاً به'}
             onRetry={loadData}
           />
+          <div className="flex items-center justify-center gap-2">
+            <Link href="/student">
+              <Button variant="outline" size="sm">العودة لبوابة الطالب</Button>
+            </Link>
+            <Link href="/login">
+              <Button size="sm">تسجيل الدخول</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -159,18 +165,39 @@ export default function StudentCourseLearningPage() {
     });
   }
 
+  const navItems = [
+    {
+      label: 'جميع المقررات',
+      href: '/student',
+      icon: <ArrowRight className="w-4 h-4" />,
+    },
+    {
+      label: 'الدروس والمحتوى',
+      icon: <BookOpen className="w-4 h-4" />,
+      active: activeTab === 'lessons',
+      onClick: () => setActiveTab('lessons'),
+      badge: lessons.length,
+    },
+    {
+      label: 'الواجبات والتكليفات',
+      icon: <FileText className="w-4 h-4" />,
+      active: activeTab === 'assignments',
+      onClick: () => setActiveTab('assignments'),
+    },
+    {
+      label: 'الاختبارات الإلكترونية',
+      icon: <FileQuestion className="w-4 h-4" />,
+      active: activeTab === 'exams',
+      onClick: () => setActiveTab('exams'),
+    },
+  ];
+
   return (
     <DashboardShell
       role="STUDENT"
       userDisplayName={courseInfo.teacherName ? `طالب لدى ${courseInfo.teacherName}` : 'طالب مسجل'}
       tenantName={courseInfo.academyName || 'بوابة الطالب'}
-      navItems={[
-        {
-          label: 'مقرراتي الدراسية',
-          href: '/student',
-          icon: <BookOpen className="w-4 h-4" />,
-        },
-      ]}
+      navItems={navItems}
       onLogout={async () => {
         await apiClient.logout();
         router.push('/login');

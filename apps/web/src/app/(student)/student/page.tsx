@@ -105,12 +105,17 @@ export default function StudentDashboardPage() {
   if (error || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[#F5F7FC]">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md space-y-3">
           <ErrorState
             title="تعذر الوصول لبوابة الطالب"
             message={error || 'يرجى تسجيل الدخول مجدداً'}
             onRetry={loadData}
           />
+          <div className="flex items-center justify-center gap-2">
+            <Button size="sm" onClick={() => router.push('/login')}>
+              الانتقال إلى صفحة الدخول
+            </Button>
+          </div>
         </div>
       </div>
     );

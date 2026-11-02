@@ -242,7 +242,7 @@ export function StudentExamsView({ courseId }: StudentExamsViewProps) {
               size="sm"
               onClick={handleSubmitAttempt}
               disabled={submittingAttempt}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5"
+              className="bg-[#246BFD] hover:bg-[#1A56DE] text-white text-xs flex items-center gap-1.5 font-bold"
             >
               <Send className="w-3.5 h-3.5" />
               {submittingAttempt ? 'جاري التسليم...' : 'إنهاء وتسليم الاختبار'}
@@ -346,7 +346,7 @@ export function StudentExamsView({ courseId }: StudentExamsViewProps) {
                     size="sm"
                     onClick={handleSubmitAttempt}
                     disabled={submittingAttempt}
-                    className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="flex items-center gap-1.5 text-xs bg-[#246BFD] hover:bg-[#1A56DE] text-white font-bold"
                   >
                     <Send className="w-3.5 h-3.5" />
                     إنهاء وتسليم الاختبار
